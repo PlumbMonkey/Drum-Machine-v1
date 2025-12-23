@@ -1,0 +1,75 @@
+{
+  "version": "0.1.0",
+  "transport": {
+    "tempo": 120,
+    "swing": 0.25,
+    "timeSignature": "4/4",
+    "barCount": 2
+  },
+  "tracks": [
+    {
+      "id": "drum.track1",
+      "name": "Kick",
+      "samplePath": "samples/kick.wav",
+      "volume": 0.8,
+      "muted": false,
+      "steps": [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+    },
+    {
+      "id": "drum.track2",
+      "name": "Snare",
+      "samplePath": "samples/snare.wav",
+      "volume": 0.8,
+      "muted": false,
+      "steps": [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]
+    },
+    {
+      "id": "drum.track3",
+      "name": "Hat Closed",
+      "samplePath": "samples/hat_closed.wav",
+      "volume": 0.6,
+      "muted": false,
+      "steps": [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0]
+    },
+    {
+      "id": "drum.track4",
+      "name": "Hat Open",
+      "samplePath": "",
+      "volume": 0.8,
+      "muted": false,
+      "steps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "id": "drum.track5",
+      "name": "Perc 1",
+      "samplePath": "",
+      "volume": 0.8,
+      "muted": false,
+      "steps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "id": "drum.track6",
+      "name": "Perc 2",
+      "samplePath": "",
+      "volume": 0.8,
+      "muted": false,
+      "steps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "id": "drum.track7",
+      "name": "Tom 1",
+      "samplePath": "",
+      "volume": 0.8,
+      "muted": false,
+      "steps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    },
+    {
+      "id": "drum.track8",
+      "name": "Tom 2",
+      "samplePath": "",
+      "volume": 0.8,
+      "muted": false,
+      "steps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    }
+  ]
+}
