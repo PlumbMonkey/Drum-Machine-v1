@@ -47,13 +47,40 @@ FetchContent_Declare(
     GIT_TAG v3.11.2
 )
 
+# Fetch SDL2 (zlib License)
+FetchContent_Declare(
+    SDL2
+    GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+    GIT_TAG release-2.30.0
+)
+
+# Fetch Dear ImGui (MIT License)
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG v1.90.4
+)
+
 # Make available
-FetchContent_MakeAvailable(rtaudio nlohmann_json dr_wav)
+FetchContent_MakeAvailable(rtaudio nlohmann_json dr_wav SDL2 imgui)
 
 # Get dr_wav and rtaudio source dirs
 FetchContent_GetProperties(dr_wav SOURCE_DIR DR_WAV_SOURCE_DIR)
 FetchContent_GetProperties(rtaudio SOURCE_DIR RTAUDIO_SOURCE_DIR)
 FetchContent_GetProperties(nlohmann_json SOURCE_DIR NLOHMANN_JSON_SOURCE_DIR)
+FetchContent_GetProperties(imgui SOURCE_DIR IMGUI_SOURCE_DIR)
+FetchContent_GetProperties(SDL2 SOURCE_DIR SDL2_SOURCE_DIR)
+
+# ImGui backend sources
+set(IMGUI_SOURCES
+    ${IMGUI_SOURCE_DIR}/imgui.cpp
+    ${IMGUI_SOURCE_DIR}/imgui_demo.cpp
+    ${IMGUI_SOURCE_DIR}/imgui_draw.cpp
+    ${IMGUI_SOURCE_DIR}/imgui_tables.cpp
+    ${IMGUI_SOURCE_DIR}/imgui_widgets.cpp
+    ${IMGUI_SOURCE_DIR}/backends/imgui_impl_sdl2.cpp
+    ${IMGUI_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+)
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
@@ -61,6 +88,9 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${DR_WAV_SOURCE_DIR})
 include_directories(${RTAUDIO_SOURCE_DIR})
 include_directories(${NLOHMANN_JSON_SOURCE_DIR}/include)
+include_directories(${IMGUI_SOURCE_DIR})
+include_directories(${IMGUI_SOURCE_DIR}/backends)
+include_directories(${SDL2_SOURCE_DIR}/include)
 
 # Source files
 set(AUDIO_SOURCES
@@ -77,6 +107,7 @@ set(SEQUENCER_SOURCES
 set(UI_SOURCES
     src/ui/UI.cpp
     src/ui/AssetManager.cpp
+    src/ui/Window.cpp
 )
 
 set(DATA_SOURCES
@@ -94,12 +125,15 @@ add_executable(DrumMachine
     ${SEQUENCER_SOURCES}
     ${UI_SOURCES}
     ${DATA_SOURCES}
+    ${IMGUI_SOURCES}
 )
 
 # Link libraries
 target_link_libraries(DrumMachine PRIVATE 
     rtaudio
     nlohmann_json::nlohmann_json
+    SDL2::SDL2
+    OpenGL::GL
 )
 
 # Platform-specific audio API
