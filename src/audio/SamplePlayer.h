@@ -14,6 +14,7 @@ namespace DrumMachine {
  * Loads and plays WAV samples using dr_wav.
  * Handles resampling to engine sample rate.
  * Per-track playback with retrigger behavior.
+ * Milestone 1: Basic sample loading and playback
  */
 class SamplePlayer {
 public:
@@ -25,6 +26,9 @@ public:
 
     // Get sample data
     const std::vector<float>& getSampleData() const { return sampleData_; }
+
+    // Get duration in seconds
+    float getDurationSeconds() const;
 
     // Playback position (in samples)
     uint32_t getPlaybackPosition() const { return playbackPosition_; }
@@ -41,19 +45,29 @@ public:
     // Reset playback to beginning
     void reset();
 
-    // Get next audio frame(s)
-    // Returns number of samples read into buffer
-    uint32_t readFrames(float* outputBuffer, uint32_t numFrames);
+    // Get next audio frames
+    // Reads interleaved stereo samples (L/R/L/R...)
+    // Returns number of frames actually read
+    uint32_t readFrames(float* outputBuffer, uint32_t numFrames, bool loop = true);
+
+    // Get sample rate of loaded sample
+    uint32_t getOriginalSampleRate() const { return originalSampleRate_; }
+
+    // Get number of channels in loaded sample
+    uint32_t getChannelCount() const { return channelCount_; }
 
 private:
     uint32_t engineSampleRate_;
-    std::vector<float> sampleData_;
-    uint32_t playbackPosition_;
+    std::vector<float> sampleData_;       // Interleaved audio data
+    uint32_t playbackPosition_;           // Current position in sample
     bool isPlaying_;
     uint32_t originalSampleRate_;
+    uint32_t channelCount_;               // 1 = mono, 2 = stereo
+    uint32_t totalFrames_;                // Total frames in sample
 
-    // Helper: Resample sample data to engine sample rate
-    void resample();
+    // Helper: Resample sample data to engine sample rate using linear interpolation
+    void resample(const std::vector<float>& input, uint32_t inputChannels,
+                  uint32_t inputSampleRate);
 };
 
 } // namespace DrumMachine
