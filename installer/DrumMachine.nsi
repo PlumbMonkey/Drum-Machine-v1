@@ -27,21 +27,26 @@ VIAddVersionKey "FileDescription" "Step Sequencer and Sample Player"
 VIAddVersionKey "FileVersion" "0.1.0"
 VIAddVersionKey "LegalCopyright" "MIT License"
 
+; Build from directory where NSIS is run
+; Expected: run from d:\Dev Projects 2025\Drum Machine-v1\installer\
+; Sources: ..\build\bin\Release\ and ..\assets\
+
 ; Installer Section
 Section "Install"
     SetOutPath "$INSTDIR"
     
     ; Copy executable and DLLs
-    File "..\..\build\bin\Release\DrumMachine.exe"
-    File "..\..\build\bin\Release\SDL2.dll"
-    File "..\..\build\bin\Release\rtaudio.dll"
-    File "..\..\build\bin\Release\rtmidi.dll"
+    File "D:\Dev Projects 2025\Drum Machine-v1\build\bin\Release\DrumMachine.exe"
+    File "D:\Dev Projects 2025\Drum Machine-v1\build\bin\Release\SDL2.dll"
+    File "D:\Dev Projects 2025\Drum Machine-v1\build\bin\Release\rtaudio.dll"
+    File "D:\Dev Projects 2025\Drum Machine-v1\build\bin\Release\rtmidi.dll"
     
     ; Copy assets and samples
-    SetOutPath "$INSTDIR\assets"
-    File /r "..\..\assets\samples"
-    File /r "..\..\assets\fonts"
-    File /r "..\..\assets\images"
+    SetOutPath "$INSTDIR\assets\samples"
+    File /nonfatal "D:\Dev Projects 2025\Drum Machine-v1\assets\samples\*.*"
+    
+    SetOutPath "$INSTDIR\assets\images"
+    File /nonfatal /r "D:\Dev Projects 2025\Drum Machine-v1\assets\images\*.*"
     
     ; Create directories for user content
     CreateDirectory "$INSTDIR\patterns"
