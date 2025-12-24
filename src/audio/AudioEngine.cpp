@@ -18,8 +18,10 @@ public:
 
 AudioEngine::AudioEngine(uint32_t sampleRate)
     : sampleRate_(sampleRate), isRunning_(false), sequencer_(nullptr), 
-      samplePlayer_(nullptr), totalFramesProcessed_(0)
+      totalFramesProcessed_(0)
 {
+    // Initialize all sample player pointers to nullptr
+    samplePlayers_.fill(nullptr);
     rtAudio_ = std::make_unique<RtAudioWrapper>();
 }
 
@@ -106,7 +108,22 @@ void AudioEngine::setSequencer(Sequencer* sequencer)
 
 void AudioEngine::setSamplePlayer(SamplePlayer* samplePlayer)
 {
-    samplePlayer_ = samplePlayer;
+    setSamplePlayer(0, samplePlayer);
+}
+
+void AudioEngine::setSamplePlayer(int trackIndex, SamplePlayer* samplePlayer)
+{
+    if (trackIndex >= 0 && trackIndex < NUM_TRACKS) {
+        samplePlayers_[trackIndex] = samplePlayer;
+    }
+}
+
+SamplePlayer* AudioEngine::getSamplePlayer(int trackIndex) const
+{
+    if (trackIndex >= 0 && trackIndex < NUM_TRACKS) {
+        return samplePlayers_[trackIndex];
+    }
+    return nullptr;
 }
 
 int AudioEngine::processAudio(void* outputBuffer, unsigned int nFrames)
@@ -121,17 +138,22 @@ int AudioEngine::processAudio(void* outputBuffer, unsigned int nFrames)
         sequencer_->advanceFrame(nFrames);
     }
 
-    // Get audio from sample player (if available and playing)
-    // Always loop - pad clicks trigger the sample, and Play starts looping playback
-    if (samplePlayer_ && samplePlayer_->isPlaying()) {
-        std::vector<float> monoBuffer(nFrames);
-        samplePlayer_->readFrames(monoBuffer.data(), nFrames, true);  // Loop the sample
-        
-        // Convert mono to stereo (duplicate to both channels) with gain
-        const float gain = 0.8f;
-        for (uint32_t i = 0; i < nFrames; ++i) {
-            buffer[i * 2] = monoBuffer[i] * gain;      // Left channel
-            buffer[i * 2 + 1] = monoBuffer[i] * gain;  // Right channel
+    // Mix audio from all 8 sample players
+    // Each track is mixed into the stereo output with equal gain
+    const float trackGain = 0.8f / NUM_TRACKS;  // Divide by track count to prevent clipping
+    std::vector<float> monoBuffer(nFrames);
+
+    for (int track = 0; track < NUM_TRACKS; ++track) {
+        if (samplePlayers_[track] && samplePlayers_[track]->isPlaying()) {
+            // Read mono samples from this track
+            samplePlayers_[track]->readFrames(monoBuffer.data(), nFrames, true);  // Loop
+            
+            // Mix into stereo output (both channels get the same mono signal)
+            for (uint32_t i = 0; i < nFrames; ++i) {
+                float sample = monoBuffer[i] * trackGain;
+                buffer[i * 2] += sample;      // Left channel
+                buffer[i * 2 + 1] += sample;  // Right channel
+            }
         }
     }
 

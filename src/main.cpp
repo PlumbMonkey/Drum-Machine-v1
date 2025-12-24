@@ -37,10 +37,32 @@ int main(int argc, char* argv[])
 
     // Configuration
     uint32_t sampleRate = 44100;
-    std::string samplePath = "test_kick.wav";  // Look for WAV in exe directory or assets/samples/
+    
+    // Track names and sample files (8 drum kit)
+    const char* trackNames[8] = {
+        "Kick",
+        "Snare",
+        "Closed Hi-Hat",
+        "Open Hi-Hat",
+        "Tom High",
+        "Tom Mid",
+        "Tom Low",
+        "Ride"
+    };
+    
+    const char* sampleFiles[8] = {
+        "kick.wav",
+        "snare.wav",
+        "closed_hihat.wav",
+        "open_hihat.wav",
+        "tom_high.wav",
+        "tom_mid.wav",
+        "tom_low.wav",
+        "ride.wav"
+    };
 
     // Initialize audio engine
-    std::cout << "[1/4] Initializing audio engine..." << std::endl;
+    std::cout << "[1/5] Initializing audio engine..." << std::endl;
     AudioEngine audioEngine(sampleRate);
     if (!audioEngine.initialize()) {
         std::cerr << "FAILED to initialize audio engine" << std::endl;
@@ -50,7 +72,7 @@ int main(int argc, char* argv[])
     std::cout << std::endl;
 
     // Initialize sequencer
-    std::cout << "[2/4] Initializing sequencer..." << std::endl;
+    std::cout << "[2/5] Initializing sequencer..." << std::endl;
     Sequencer sequencer(sampleRate);
     audioEngine.setSequencer(&sequencer);
     sequencer.getTransport().setTempo(120.0f);
@@ -59,17 +81,27 @@ int main(int argc, char* argv[])
     std::cout << "      Sequencer OK" << std::endl;
     std::cout << std::endl;
 
-    // Load sample
-    std::cout << "[3/4] Loading sample..." << std::endl;
-    SamplePlayer samplePlayer(sampleRate);
-    if (!samplePlayer.loadSample(samplePath)) {
-        std::cerr << "FAILED to load sample: " << samplePath << std::endl;
-        audioEngine.shutdown();
-        return 1;
+    // Load 8 drum samples (one per track)
+    std::cout << "[3/5] Loading drum kit samples..." << std::endl;
+    std::vector<std::unique_ptr<SamplePlayer>> samplePlayers;
+    std::vector<SamplePlayer*> rawPlayerPtrs;
+    
+    for (int track = 0; track < 8; ++track) {
+        auto player = std::make_unique<SamplePlayer>(sampleRate);
+        if (!player->loadSample(sampleFiles[track])) {
+            std::cerr << "WARNING: Failed to load sample: " << sampleFiles[track] << std::endl;
+            // Continue - allow other samples to load
+        } else {
+            std::cout << "      ✓ " << trackNames[track] << " (" << sampleFiles[track] << ")" << std::endl;
+        }
+        rawPlayerPtrs.push_back(player.get());
+        samplePlayers.push_back(std::move(player));
     }
-    std::cout << "      Sample OK (" << samplePlayer.getDurationSeconds() << " seconds)" << std::endl;
-    // Don't auto-start - user will click Play button
-    audioEngine.setSamplePlayer(&samplePlayer);  // Wire sample player to audio engine
+    
+    // Wire all sample players to audio engine
+    for (int track = 0; track < 8; ++track) {
+        audioEngine.setSamplePlayer(track, rawPlayerPtrs[track]);
+    }
     std::cout << std::endl;
 
     // Initialize MIDI manager
@@ -94,7 +126,7 @@ int main(int argc, char* argv[])
     window.setAudioEngine(&audioEngine);
     window.setSequencer(&sequencer);
     window.setMidiManager(&midiManager);
-    window.setSamplePlayer(&samplePlayer);
+    window.setSamplePlayer(rawPlayerPtrs[0]);  // Keep reference for backwards compatibility
     std::cout << "      UI OK" << std::endl;
     std::cout << std::endl;
 
@@ -119,7 +151,9 @@ int main(int argc, char* argv[])
     std::cout << "Shutting down..." << std::endl;
 
     // Cleanup
-    samplePlayer.stop();
+    for (auto& player : samplePlayers) {
+        player->stop();
+    }
     window.shutdown();
     midiManager.shutdown();
     audioEngine.shutdown();
