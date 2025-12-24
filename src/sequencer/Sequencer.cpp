@@ -29,7 +29,10 @@ bool Sequencer::shouldTrigger(uint32_t trackIndex, uint32_t step, uint64_t curre
 
 void Sequencer::advanceFrame(uint32_t numFrames)
 {
-    transport_.advanceFrame(sampleRate_);
+    // Advance transport by numFrames (once per sample)
+    for (uint32_t i = 0; i < numFrames; i++) {
+        transport_.advanceFrame(sampleRate_);
+    }
     absoluteFrameCounter_ += numFrames;
 }
 

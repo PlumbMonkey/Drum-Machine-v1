@@ -47,6 +47,18 @@ void Window::setSamplePlayer(SamplePlayer* samplePlayer)
     }
 }
 
+void Window::setSamplePlayers(const std::array<SamplePlayer*, 8>& players)
+{
+    std::cout << "[WINDOW] setSamplePlayers called with " << players.size() << " players" << std::flush << std::endl;
+    for (size_t i = 0; i < players.size(); ++i) {
+        std::cout << "  Player[" << i << "]: " << (players[i] ? "VALID" : "nullptr") << std::flush << std::endl;
+    }
+    if (stepEditor_) {
+        stepEditor_->setSamplePlayers(players);
+        std::cout << "[WINDOW] Array passed to StepEditor" << std::flush << std::endl;
+    }
+}
+
 bool Window::initialize()
 {
     // Initialize SDL2
@@ -154,6 +166,20 @@ void Window::renderUI()
     // Simple menu bar
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Load Sample...", "Ctrl+O")) {
+                // TODO: Implement file dialog for loading samples
+                std::cout << "[UI] Load sample dialog not yet implemented" << std::endl;
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Save Pattern...", "Ctrl+S")) {
+                // TODO: Implement file dialog for saving patterns
+                std::cout << "[UI] Save pattern dialog not yet implemented" << std::endl;
+            }
+            if (ImGui::MenuItem("Load Pattern...", "Ctrl+L")) {
+                // TODO: Implement file dialog for loading patterns
+                std::cout << "[UI] Load pattern dialog not yet implemented" << std::endl;
+            }
+            ImGui::Separator();
             if (ImGui::MenuItem("Exit", "ESC")) {
                 isOpen_ = false;
             }
@@ -170,27 +196,28 @@ void Window::renderUI()
     if (ImGui::Begin("Transport")) {
         static float tempo = 120.0f;
         static float swing = 0.0f;
+        static float masterVolume = 1.0f;
 
-        // Play/Stop buttons
-        if (samplePlayer_) {
-            if (samplePlayer_->isPlaying()) {
+        // Play/Stop buttons - control the Transport (sequencer playback)
+        if (sequencer_) {
+            if (sequencer_->getTransport().getPlayState() == Transport::PlayState::Playing) {
                 if (ImGui::Button("Stop##audio", ImVec2(60, 0))) {
-                    samplePlayer_->stop();
+                    sequencer_->getTransport().stop();
                 }
             } else {
                 if (ImGui::Button("Play##audio", ImVec2(60, 0))) {
-                    samplePlayer_->reset();  // Reset to beginning first
-                    samplePlayer_->start();  // Then start looping
+                    sequencer_->getTransport().play();
                 }
             }
             ImGui::SameLine();
-            ImGui::Text("%s", samplePlayer_->isPlaying() ? "Playing" : "Stopped");
+            ImGui::Text("%s", sequencer_->getTransport().getPlayState() == Transport::PlayState::Playing ? "Playing" : "Stopped");
         }
 
         ImGui::Separator();
 
         ImGui::SliderFloat("Tempo (BPM)", &tempo, 60.0f, 180.0f);
         ImGui::SliderFloat("Swing (%)", &swing, 0.0f, 0.6f, "%.2f");
+        ImGui::SliderFloat("Master Volume", &masterVolume, 0.0f, 1.5f, "%.2f");
 
         if (sequencer_) {
             sequencer_->getTransport().setTempo(tempo);
@@ -199,8 +226,8 @@ void Window::renderUI()
 
         // Calculate and display current step
         if (audioEngine_ && sequencer_) {
-            // Only advance step if sample is playing
-            if (samplePlayer_ && samplePlayer_->isPlaying()) {
+            // Only advance step if transport is playing
+            if (sequencer_->getTransport().getPlayState() == Transport::PlayState::Playing) {
                 uint64_t frameCount = audioEngine_->getTotalFramesProcessed();
                 uint32_t sampleRate = audioEngine_->getSampleRate();
                 float currentTempo = sequencer_->getTransport().getTempo();
@@ -218,9 +245,9 @@ void Window::renderUI()
         ImGui::End();
     }
 
-    // Step Editor window - main grid
-    ImGui::SetNextWindowPos(ImVec2(10, 180), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(1220, 480), ImGuiCond_FirstUseEver);
+    // Step Editor window - main grid (moved 20% right to show track names)
+    ImGui::SetNextWindowPos(ImVec2(256, 180), ImGuiCond_FirstUseEver);  // 1280 * 0.2 = 256
+    ImGui::SetNextWindowSize(ImVec2(1000, 480), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowBgAlpha(0.95f);
     
     if (ImGui::Begin("Step Editor")) {

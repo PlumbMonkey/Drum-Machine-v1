@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <cstdint>
+#include <array>
 
 // Forward declarations for SDL - will be fully defined in .cpp
 namespace DrumMachine {
@@ -43,6 +44,9 @@ public:
     void setSequencer(Sequencer* sequencer) { sequencer_ = sequencer; }
     void setMidiManager(MidiManager* midiManager) { midiManager_ = midiManager; }
     void setSamplePlayer(SamplePlayer* samplePlayer);
+    
+    // Set all 8 sample players for pad preview/triggering
+    void setSamplePlayers(const std::array<SamplePlayer*, 8>& players);
 
     // Getters
     uint32_t getWidth() const { return width_; }

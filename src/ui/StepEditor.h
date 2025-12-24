@@ -28,6 +28,9 @@ public:
 
     // Set sample player for triggering on pad clicks
     void setSamplePlayer(SamplePlayer* samplePlayer) { samplePlayer_ = samplePlayer; }
+    
+    // Set all 8 sample players for multi-track pad preview
+    void setSamplePlayers(const std::array<SamplePlayer*, 8>& players);
 
     // Get/set selected track
     uint32_t getSelectedTrack() const { return selectedTrack_; }
@@ -44,6 +47,7 @@ private:
     uint32_t selectedTrack_;
     std::array<bool, NUM_TRACKS> mutedTracks_;
     SamplePlayer* samplePlayer_;  // For triggering samples on pad clicks
+    std::array<SamplePlayer*, NUM_TRACKS> samplePlayers_;  // All 8 sample players for pad preview
 
     // Track display names
     const char* trackNames_[NUM_TRACKS] = {

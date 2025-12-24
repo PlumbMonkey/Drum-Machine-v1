@@ -53,7 +53,7 @@ public:
     SamplePlayer* getSamplePlayer(int trackIndex) const;
 
     // Legacy: Set single sample player (for backwards compatibility)
-    void setSamplePlayer(SamplePlayer* samplePlayer) { setSamplePlayer(0, samplePlayer); }
+    void setSamplePlayer(SamplePlayer* samplePlayer);
 
 private:
     uint32_t sampleRate_;
@@ -61,6 +61,7 @@ private:
     Sequencer* sequencer_;
     std::array<SamplePlayer*, NUM_TRACKS> samplePlayers_;
     std::atomic<uint64_t> totalFramesProcessed_;
+    uint32_t lastStep_;  // Track last step to detect step changes
     
     // RtAudio instance (forward declared, defined in .cpp)
     class RtAudioWrapper;

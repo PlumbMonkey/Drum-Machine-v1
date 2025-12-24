@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <atomic>
 
 namespace DrumMachine {
 
@@ -62,8 +63,9 @@ public:
 private:
     uint32_t engineSampleRate_;
     std::vector<float> sampleData_;       // Interleaved audio data
-    uint32_t playbackPosition_;           // Current position in sample
-    bool isPlaying_;
+    std::atomic<uint32_t> playbackPosition_;  // Current position in sample (atomic for thread safety)
+    std::atomic<bool> isPlaying_;             // Playing state (atomic for thread safety)
+    std::atomic<bool> pendingTrigger_;        // Flag set by UI thread, consumed by audio thread
     uint32_t originalSampleRate_;
     uint32_t channelCount_;               // 1 = mono, 2 = stereo
     uint32_t totalFrames_;                // Total frames in sample

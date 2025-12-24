@@ -1,5 +1,6 @@
 #include "Pattern.h"
 #include <algorithm>
+#include <iostream>
 
 namespace DrumMachine {
 
@@ -50,6 +51,8 @@ bool Pattern::isStepActive(uint32_t trackIndex, uint32_t stepIndex) const
 void Pattern::setStepActive(uint32_t trackIndex, uint32_t stepIndex, bool active)
 {
     tracks_[trackIndex].steps[stepIndex] = active ? 1 : 0;
+    std::cout << "[PATTERN] Track " << trackIndex << " Step " << stepIndex 
+              << " set to " << (active ? "ON" : "OFF") << std::endl;
 }
 
 void Pattern::setTrackVolume(uint32_t trackIndex, float volume)

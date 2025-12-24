@@ -7,8 +7,35 @@
 #include "ui/Window.h"
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
 using namespace DrumMachine;
+
+/**
+ * Helper function to find a sample file in multiple search paths
+ */
+std::string findSampleFile(const char* filename) {
+    namespace fs = std::filesystem;
+    
+    // Search paths (relative to exe directory)
+    std::vector<std::string> searchPaths = {
+        std::string(filename),                          // Current directory
+        std::string("assets/samples/") + filename,      // assets/samples/ subdirectory
+        std::string("../assets/samples/") + filename,   // Parent directory
+        std::string("../../assets/samples/") + filename // Two levels up
+    };
+    
+    for (const auto& path : searchPaths) {
+        if (fs::exists(path)) {
+            std::cout << "      Found: " << path << std::endl;
+            return path;
+        }
+    }
+    
+    // Not found - return original filename and let dr_wav report the error
+    std::cout << "      Not found (searched in: current dir, assets/samples/)" << std::endl;
+    return filename;
+}
 
 /**
  * Milestone 5: MIDI Foundation
@@ -78,7 +105,17 @@ int main(int argc, char* argv[])
     sequencer.getTransport().setTempo(120.0f);
     sequencer.getTransport().setTimeSignature("4/4");
     sequencer.getTransport().setBarCount(1);
-    std::cout << "      Sequencer OK" << std::endl;
+    
+    // Set default pattern for testing (simple beat: kick on 1, 5, 9, 13; snare on 5, 13)
+    Pattern& pattern = sequencer.getPattern();
+    pattern.setStepActive(0, 0, true);  // Kick on step 0
+    pattern.setStepActive(0, 4, true);  // Kick on step 4
+    pattern.setStepActive(0, 8, true);  // Kick on step 8
+    pattern.setStepActive(0, 12, true); // Kick on step 12
+    pattern.setStepActive(1, 4, true);  // Snare on step 4
+    pattern.setStepActive(1, 12, true); // Snare on step 12
+    
+    std::cout << "      Sequencer OK (default pattern loaded)" << std::endl;
     std::cout << std::endl;
 
     // Load 8 drum samples (one per track)
@@ -88,19 +125,22 @@ int main(int argc, char* argv[])
     
     for (int track = 0; track < 8; ++track) {
         auto player = std::make_unique<SamplePlayer>(sampleRate);
-        if (!player->loadSample(sampleFiles[track])) {
+        std::string fullPath = findSampleFile(sampleFiles[track]);
+        if (!player->loadSample(fullPath)) {
             std::cerr << "WARNING: Failed to load sample: " << sampleFiles[track] << std::endl;
             // Continue - allow other samples to load
         } else {
-            std::cout << "      ✓ " << trackNames[track] << " (" << sampleFiles[track] << ")" << std::endl;
+            std::cout << "      ✓ " << trackNames[track] << std::endl;
         }
         rawPlayerPtrs.push_back(player.get());
         samplePlayers.push_back(std::move(player));
     }
     
     // Wire all sample players to audio engine
+    std::cout << "\n[POINTERS] SamplePlayer addresses:" << std::endl;
     for (int track = 0; track < 8; ++track) {
         audioEngine.setSamplePlayer(track, rawPlayerPtrs[track]);
+        std::cout << "  Track " << track << ": " << static_cast<void*>(rawPlayerPtrs[track]) << std::endl;
     }
     std::cout << std::endl;
 
@@ -127,6 +167,17 @@ int main(int argc, char* argv[])
     window.setSequencer(&sequencer);
     window.setMidiManager(&midiManager);
     window.setSamplePlayer(rawPlayerPtrs[0]);  // Keep reference for backwards compatibility
+    
+    // Convert vector of unique_ptrs to array of raw pointers for UI pad triggering
+    std::array<SamplePlayer*, 8> playerArray;
+    for (int i = 0; i < 8; ++i) {
+        playerArray[i] = rawPlayerPtrs[i];
+    }
+    std::cout << "[POINTERS] Passing to StepEditor:" << std::endl;
+    for (int i = 0; i < 8; ++i) {
+        std::cout << "  playerArray[" << i << "] = " << static_cast<void*>(playerArray[i]) << std::endl;
+    }
+    window.setSamplePlayers(playerArray);
     std::cout << "      UI OK" << std::endl;
     std::cout << std::endl;
 

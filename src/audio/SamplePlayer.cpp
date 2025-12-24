@@ -12,7 +12,8 @@ namespace DrumMachine {
 
 SamplePlayer::SamplePlayer(uint32_t engineSampleRate)
     : engineSampleRate_(engineSampleRate), playbackPosition_(0), 
-      isPlaying_(false), originalSampleRate_(44100), channelCount_(1), totalFrames_(0)
+      isPlaying_(false), pendingTrigger_(false), originalSampleRate_(44100), 
+      channelCount_(1), totalFrames_(0)
 {
 }
 
@@ -47,6 +48,7 @@ bool SamplePlayer::loadSample(const std::string& filePath)
 
     // Copy to vector (interleaved format)
     std::vector<float> rawData(pSampleData, pSampleData + frameCount * channels);
+    std::cout << "  [DEBUG] rawData.size() = " << rawData.size() << " samples" << std::endl;
     
     // Free dr_wav allocation
     drwav_free(pSampleData, nullptr);
@@ -59,6 +61,16 @@ bool SamplePlayer::loadSample(const std::string& filePath)
         sampleData_ = rawData;
     }
 
+    // CHECK: Print first few sample values to verify audio data is real
+    if (!sampleData_.empty()) {
+        float maxVal = 0.0f;
+        for (size_t i = 0; i < std::min(sampleData_.size(), size_t(100)); i++) {
+            maxVal = std::max(maxVal, std::abs(sampleData_[i]));
+        }
+        std::cout << "  [SAMPLE_CHECK] First 100 samples max value: " << maxVal 
+                  << " (should be > 0.0)" << std::endl;
+    }
+    
     reset();
     return true;
 }
@@ -106,31 +118,42 @@ float SamplePlayer::getDurationSeconds() const
 
 void SamplePlayer::start()
 {
-    playbackPosition_ = 0;
-    isPlaying_ = true;
+    // Set pending trigger flag - audio thread will consume this and reset position
+    // This avoids race conditions where UI and audio threads fight over position
+    pendingTrigger_.store(true, std::memory_order_release);
+    isPlaying_.store(true, std::memory_order_release);
 }
 
 void SamplePlayer::stop()
 {
-    isPlaying_ = false;
+    isPlaying_.store(false, std::memory_order_release);
 }
 
 void SamplePlayer::reset()
 {
-    playbackPosition_ = 0;
+    pendingTrigger_.store(true, std::memory_order_release);
 }
 
 uint32_t SamplePlayer::readFrames(float* outputBuffer, uint32_t numFrames, bool loop)
 {
-    if (!isPlaying_ || sampleData_.empty()) {
+    // Check for pending trigger first (set by UI thread via start()/reset())
+    // Use exchange to atomically read and clear the flag
+    if (pendingTrigger_.exchange(false, std::memory_order_acq_rel)) {
+        playbackPosition_.store(0, std::memory_order_release);
+    }
+    
+    // Atomic load for thread-safe check (UI thread may call start() concurrently)
+    if (!isPlaying_.load(std::memory_order_acquire) || sampleData_.empty()) {
         std::memset(outputBuffer, 0, numFrames * channelCount_ * sizeof(float));
         return 0;
     }
 
+    // Load position atomically
+    uint32_t currentPos = playbackPosition_.load(std::memory_order_acquire);
     uint32_t framesRead = 0;
     
     for (uint32_t i = 0; i < numFrames; ++i) {
-        uint32_t sampleIndex = playbackPosition_ * channelCount_;
+        uint32_t sampleIndex = currentPos * channelCount_;
 
         if (sampleIndex + channelCount_ - 1 < sampleData_.size()) {
             // Copy interleaved channels
@@ -141,7 +164,7 @@ uint32_t SamplePlayer::readFrames(float* outputBuffer, uint32_t numFrames, bool 
         } else {
             // End of sample reached
             if (loop) {
-                playbackPosition_ = 0;
+                currentPos = 0;
                 sampleIndex = 0;
                 for (uint32_t ch = 0; ch < channelCount_; ++ch) {
                     outputBuffer[i * channelCount_ + ch] = sampleData_[sampleIndex + ch];
@@ -152,13 +175,16 @@ uint32_t SamplePlayer::readFrames(float* outputBuffer, uint32_t numFrames, bool 
                 for (uint32_t ch = 0; ch < channelCount_; ++ch) {
                     outputBuffer[i * channelCount_ + ch] = 0.0f;
                 }
-                isPlaying_ = false;
+                isPlaying_.store(false, std::memory_order_release);
                 break;
             }
         }
 
-        playbackPosition_++;
+        currentPos++;
     }
+    
+    // Store final position atomically
+    playbackPosition_.store(currentPos, std::memory_order_release);
 
     return framesRead;
 }

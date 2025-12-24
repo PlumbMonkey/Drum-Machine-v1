@@ -3,6 +3,7 @@
 #include "../sequencer/Pattern.h"
 #include "../audio/SamplePlayer.h"
 #include <imgui.h>
+#include <iostream>
 
 namespace DrumMachine {
 
@@ -12,6 +13,21 @@ StepEditor::StepEditor()
     // Initialize all tracks as unmuted
     for (auto& muted : mutedTracks_) {
         muted = false;
+    }
+    // Initialize sample players array
+    samplePlayers_.fill(nullptr);
+}
+
+void StepEditor::setSamplePlayers(const std::array<SamplePlayer*, 8>& players)
+{
+    std::cout << "[STEP_EDITOR] setSamplePlayers called" << std::flush << std::endl;
+    for (size_t i = 0; i < players.size(); ++i) {
+        std::cout << "  Player[" << i << "]: " << (players[i] ? "VALID" : "nullptr") << std::flush << std::endl;
+    }
+    samplePlayers_ = players;
+    std::cout << "[STEP_EDITOR] Array stored. Verifying storage:" << std::flush << std::endl;
+    for (size_t i = 0; i < samplePlayers_.size(); ++i) {
+        std::cout << "  samplePlayers_[" << i << "]: " << (samplePlayers_[i] ? "VALID" : "nullptr") << std::flush << std::endl;
     }
 }
 
@@ -111,7 +127,15 @@ void StepEditor::renderStepGrid(Sequencer* sequencer, uint32_t currentStep)
             ImGui::SetCursorPosX(xPos);
             if (ImGui::Button("##step", ImVec2(buttonSize, buttonSize))) {
                 // Toggle step in pattern
-                pattern.setStepActive(track, step, !isEnabled);
+                bool newState = !isEnabled;
+                pattern.setStepActive(track, step, newState);
+                
+                // Trigger sample preview on pad click (always trigger on click, not just when turning ON)
+                if (samplePlayers_[track]) {
+                    samplePlayers_[track]->trigger();
+                    std::cout << "[PAD_CLICK] Track " << track << " Step " << step 
+                              << " triggered (duration: " << samplePlayers_[track]->getDurationSeconds() << "s)" << std::endl;
+                }
             }
 
             ImGui::PopStyleColor(3);
