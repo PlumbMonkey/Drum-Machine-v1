@@ -9,14 +9,19 @@ namespace DrumMachine {
 
 PatternManager::PatternManager()
 {
-    // Ensure patterns directory exists
-    fs::path patternDir(getPatternDirectory());
-    if (!fs::exists(patternDir)) {
-        try {
+    // Ensure patterns and MIDI directories exist
+    try {
+        fs::path patternDir(getPatternDirectory());
+        if (!fs::exists(patternDir)) {
             fs::create_directories(patternDir);
-        } catch (const std::exception& e) {
-            std::cerr << "Failed to create pattern directory: " << e.what() << std::endl;
         }
+        
+        fs::path midiDir(getMidiDirectory());
+        if (!fs::exists(midiDir)) {
+            fs::create_directories(midiDir);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Failed to create directories: " << e.what() << std::endl;
     }
 }
 
@@ -71,6 +76,66 @@ std::vector<std::string> PatternManager::getAvailablePatterns() const
     }
 
     return patterns;
+}
+
+bool PatternManager::exportToMidi(const std::string& filename, const Pattern& pattern,
+                                  float tempo)
+{
+    std::string filePath = std::string(getMidiDirectory()) + filename;
+    // Check if filename ends with .mid (C++17 compatible)
+    const std::string midExt = ".mid";
+    if (filePath.length() < midExt.length() || 
+        filePath.substr(filePath.length() - midExt.length()) != midExt) {
+        filePath += ".mid";
+    }
+    return midiManager_.exportToMidi(filePath, pattern, tempo);
+}
+
+bool PatternManager::importFromMidi(const std::string& filename, Pattern& pattern)
+{
+    std::string filePath = std::string(getMidiDirectory()) + filename;
+    // Check if filename ends with .mid (C++17 compatible)
+    const std::string midExt = ".mid";
+    if (filePath.length() < midExt.length() || 
+        filePath.substr(filePath.length() - midExt.length()) != midExt) {
+        filePath += ".mid";
+    }
+    return midiManager_.importFromMidi(filePath, pattern);
+}
+
+std::vector<std::string> PatternManager::getAvailableMidiFiles() const
+{
+    std::vector<std::string> midiFiles;
+    
+    try {
+        fs::path midiDir(getMidiDirectory());
+        if (!fs::exists(midiDir)) {
+            return midiFiles;
+        }
+
+        for (const auto& entry : fs::directory_iterator(midiDir)) {
+            if (entry.is_regular_file()) {
+                std::string ext = entry.path().extension().string();
+                // Convert to lowercase for comparison (C++17 compatible)
+                std::transform(ext.begin(), ext.end(), ext.begin(),
+                               [](char c) { return static_cast<char>(std::tolower(static_cast<unsigned char>(c))); });
+                
+                if (ext == ".mid" || ext == ".midi") {
+                    std::string filename = entry.path().filename().string();
+                    // Remove extension
+                    size_t dotPos = filename.find_last_of('.');
+                    if (dotPos != std::string::npos) {
+                        filename = filename.substr(0, dotPos);
+                    }
+                    midiFiles.push_back(filename);
+                }
+            }
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error listing MIDI files: " << e.what() << std::endl;
+    }
+
+    return midiFiles;
 }
 
 } // namespace DrumMachine

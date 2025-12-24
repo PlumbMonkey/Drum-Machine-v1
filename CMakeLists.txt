@@ -68,6 +68,10 @@ FetchContent_Declare(
     GIT_TAG master
 )
 
+# Disable tests for RtAudio and RtMidi to avoid conflicts
+set(RTAUDIO_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(RTMIDI_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+
 # Make available
 FetchContent_MakeAvailable(rtaudio rtmidi nlohmann_json dr_wav SDL2 imgui)
 
@@ -128,6 +132,7 @@ set(UI_SOURCES
 
 set(DATA_SOURCES
     src/data/DataManager.cpp
+    src/data/MidiFileManager.cpp
 )
 
 set(CORE_SOURCES
