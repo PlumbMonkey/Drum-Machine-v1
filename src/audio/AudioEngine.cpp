@@ -4,6 +4,7 @@
 #include <RtAudio.h>
 #include <iostream>
 #include <cstring>
+#include <vector>
 
 using namespace rt::audio;
 
@@ -112,13 +113,27 @@ int AudioEngine::processAudio(void* outputBuffer, unsigned int nFrames)
 {
     float* buffer = static_cast<float*>(outputBuffer);
     
-    // Zero out buffer first
-    std::memset(buffer, 0, nFrames * 2 * sizeof(float)); // 2 channels
+    // Zero out buffer first (stereo: 2 channels per frame)
+    std::memset(buffer, 0, nFrames * 2 * sizeof(float));
 
-    // Get audio from sample player (if available)
-    if (samplePlayer_) {
-        // Read samples from sample player and write to buffer
-        samplePlayer_->readFrames(buffer, nFrames, true);  // Loop the sample
+    // Advance sequencer if available
+    if (sequencer_) {
+        sequencer_->advanceFrame(nFrames);
+    }
+
+    // Get audio from sample player (if available and playing)
+    if (samplePlayer_ && samplePlayer_->isPlaying()) {
+        // Check if any step is currently active - if so, play sample
+        // For now, just keep playing if started
+        std::vector<float> monoBuffer(nFrames);
+        samplePlayer_->readFrames(monoBuffer.data(), nFrames, false);  // No looping - play once
+        
+        // Convert mono to stereo (duplicate to both channels) with gain
+        const float gain = 0.8f;
+        for (uint32_t i = 0; i < nFrames; ++i) {
+            buffer[i * 2] = monoBuffer[i] * gain;      // Left channel
+            buffer[i * 2 + 1] = monoBuffer[i] * gain;  // Right channel
+        }
     }
 
     // Update frame counter (atomic, lock-free)

@@ -94,6 +94,7 @@ int main(int argc, char* argv[])
     window.setAudioEngine(&audioEngine);
     window.setSequencer(&sequencer);
     window.setMidiManager(&midiManager);
+    window.setSamplePlayer(&samplePlayer);
     std::cout << "      UI OK" << std::endl;
     std::cout << std::endl;
 

@@ -8,6 +8,7 @@
 namespace DrumMachine {
 
 class Sequencer;
+class SamplePlayer;
 
 /**
  * StepEditor
@@ -25,6 +26,9 @@ public:
     // Render the step editor UI
     void render(Sequencer* sequencer, uint32_t currentStep);
 
+    // Set sample player for triggering on pad clicks
+    void setSamplePlayer(SamplePlayer* samplePlayer) { samplePlayer_ = samplePlayer; }
+
     // Get/set selected track
     uint32_t getSelectedTrack() const { return selectedTrack_; }
     void setSelectedTrack(uint32_t track) { selectedTrack_ = track; }
@@ -39,6 +43,7 @@ private:
 
     uint32_t selectedTrack_;
     std::array<bool, NUM_TRACKS> mutedTracks_;
+    SamplePlayer* samplePlayer_;  // For triggering samples on pad clicks
 
     // Track display names
     const char* trackNames_[NUM_TRACKS] = {

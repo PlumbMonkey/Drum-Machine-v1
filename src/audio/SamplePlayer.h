@@ -45,6 +45,9 @@ public:
     // Reset playback to beginning
     void reset();
 
+    // Trigger sample (reset and start)
+    void trigger() { reset(); start(); }
+
     // Get next audio frames
     // Reads interleaved stereo samples (L/R/L/R...)
     // Returns number of frames actually read

@@ -3,6 +3,7 @@
 #include "PatternManager.h"
 #include "../audio/AudioEngine.h"
 #include "../audio/MidiManager.h"
+#include "../audio/SamplePlayer.h"
 #include "../sequencer/Sequencer.h"
 #include <SDL2/SDL.h>
 #include <imgui.h>
@@ -25,7 +26,7 @@ namespace DrumMachine {
 Window::Window(uint32_t width, uint32_t height)
     : width_(width), height_(height), isOpen_(true),
       sdlWindow_(nullptr), glContext_(nullptr),
-      audioEngine_(nullptr), sequencer_(nullptr), midiManager_(nullptr),
+      audioEngine_(nullptr), sequencer_(nullptr), midiManager_(nullptr), samplePlayer_(nullptr),
       currentStep_(0)
 {
     stepEditor_ = std::make_unique<StepEditor>();
@@ -36,6 +37,14 @@ Window::Window(uint32_t width, uint32_t height)
 Window::~Window()
 {
     shutdown();
+}
+
+void Window::setSamplePlayer(SamplePlayer* samplePlayer)
+{
+    samplePlayer_ = samplePlayer;
+    if (stepEditor_) {
+        stepEditor_->setSamplePlayer(samplePlayer);
+    }
 }
 
 bool Window::initialize()
@@ -162,6 +171,23 @@ void Window::renderUI()
         static float tempo = 120.0f;
         static float swing = 0.0f;
 
+        // Play/Stop buttons
+        if (samplePlayer_) {
+            if (samplePlayer_->isPlaying()) {
+                if (ImGui::Button("Stop##audio", ImVec2(60, 0))) {
+                    samplePlayer_->stop();
+                }
+            } else {
+                if (ImGui::Button("Play##audio", ImVec2(60, 0))) {
+                    samplePlayer_->start();
+                }
+            }
+            ImGui::SameLine();
+            ImGui::Text("%s", samplePlayer_->isPlaying() ? "Playing" : "Stopped");
+        }
+
+        ImGui::Separator();
+
         ImGui::SliderFloat("Tempo (BPM)", &tempo, 60.0f, 180.0f);
         ImGui::SliderFloat("Swing (%)", &swing, 0.0f, 0.6f, "%.2f");
 
@@ -172,15 +198,20 @@ void Window::renderUI()
 
         // Calculate and display current step
         if (audioEngine_ && sequencer_) {
-            uint64_t frameCount = audioEngine_->getTotalFramesProcessed();
-            uint32_t sampleRate = audioEngine_->getSampleRate();
-            float currentTempo = sequencer_->getTransport().getTempo();
-            uint64_t samplesPerBeat = (sampleRate * 60) / static_cast<uint32_t>(currentTempo);
-            uint64_t samplesPerStep = samplesPerBeat / 4;
-            if (samplesPerStep > 0) {
-                currentStep_ = (frameCount / samplesPerStep) % 16;
+            // Only advance step if sample is playing
+            if (samplePlayer_ && samplePlayer_->isPlaying()) {
+                uint64_t frameCount = audioEngine_->getTotalFramesProcessed();
+                uint32_t sampleRate = audioEngine_->getSampleRate();
+                float currentTempo = sequencer_->getTransport().getTempo();
+                uint64_t samplesPerBeat = (sampleRate * 60) / static_cast<uint32_t>(currentTempo);
+                uint64_t samplesPerStep = samplesPerBeat / 4;
+                if (samplesPerStep > 0) {
+                    currentStep_ = (frameCount / samplesPerStep) % 16;
+                }
+                ImGui::Text("Step: %u / 15", currentStep_);
+            } else {
+                ImGui::Text("Step: stopped");
             }
-            ImGui::Text("Step: %u / 15", currentStep_);
         }
 
         ImGui::End();

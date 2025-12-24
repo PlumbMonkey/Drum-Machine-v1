@@ -13,6 +13,7 @@ class Sequencer;
 class StepEditor;
 class PatternManager;
 class MidiManager;
+class SamplePlayer;
 
 /**
  * Window
@@ -41,6 +42,7 @@ public:
     void setAudioEngine(AudioEngine* audioEngine) { audioEngine_ = audioEngine; }
     void setSequencer(Sequencer* sequencer) { sequencer_ = sequencer; }
     void setMidiManager(MidiManager* midiManager) { midiManager_ = midiManager; }
+    void setSamplePlayer(SamplePlayer* samplePlayer);
 
     // Getters
     uint32_t getWidth() const { return width_; }
@@ -57,6 +59,7 @@ private:
     AudioEngine* audioEngine_;
     Sequencer* sequencer_;
     MidiManager* midiManager_;
+    SamplePlayer* samplePlayer_;
 
     // UI components
     std::unique_ptr<StepEditor> stepEditor_;
