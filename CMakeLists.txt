@@ -111,6 +111,7 @@ set(UI_SOURCES
     src/ui/StepEditor.cpp
     src/ui/PatternManager.cpp
     src/ui/SwingVisualizer.cpp
+    src/ui/SampleBrowser.cpp
 )
 
 set(DATA_SOURCES
@@ -118,6 +119,7 @@ set(DATA_SOURCES
 )
 
 set(CORE_SOURCES
+    src/core/ParameterBus.cpp
     src/main.cpp
 )
 

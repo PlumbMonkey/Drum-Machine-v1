@@ -13,6 +13,7 @@ class Sequencer;
 class StepEditor;
 class PatternManager;
 class SwingVisualizer;
+class SampleBrowser;
 
 /**
  * Window
@@ -60,6 +61,7 @@ private:
     std::unique_ptr<StepEditor> stepEditor_;
     std::unique_ptr<PatternManager> patternManager_;
     std::unique_ptr<SwingVisualizer> swingVisualizer_;
+    std::unique_ptr<SampleBrowser> sampleBrowser_;
 
     // ImGui state
     bool showDemoWindow_;

@@ -2,6 +2,7 @@
 #include "StepEditor.h"
 #include "PatternManager.h"
 #include "SwingVisualizer.h"
+#include "SampleBrowser.h"
 #include "../audio/AudioEngine.h"
 #include "../sequencer/Sequencer.h"
 #include <SDL2/SDL.h>
@@ -23,6 +24,7 @@ Window::Window(uint32_t width, uint32_t height)
     stepEditor_ = std::make_unique<StepEditor>();
     patternManager_ = std::make_unique<PatternManager>();
     swingVisualizer_ = std::make_unique<SwingVisualizer>();
+    sampleBrowser_ = std::make_unique<SampleBrowser>();
     std::memset(patternNameBuffer_, 0, sizeof(patternNameBuffer_));
 }
 
@@ -332,6 +334,13 @@ void Window::renderUI()
     // Step Editor
     if (stepEditor_ && sequencer_) {
         stepEditor_->render(sequencer_, currentStep_);
+    }
+
+    // Sample Browser
+    if (sampleBrowser_ && sequencer_ && audioEngine_) {
+        // Note: SamplePlayer is owned by AudioEngine, would need getter
+        // For now, just render the UI with nullptr for SamplePlayer
+        sampleBrowser_->render(sequencer_, nullptr, currentStep_ % 8);
     }
 
     // Swing Visualizer
