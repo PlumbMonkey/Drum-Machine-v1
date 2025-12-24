@@ -27,11 +27,12 @@ Window::Window(uint32_t width, uint32_t height)
     : width_(width), height_(height), isOpen_(true),
       sdlWindow_(nullptr), glContext_(nullptr),
       audioEngine_(nullptr), sequencer_(nullptr), midiManager_(nullptr), samplePlayer_(nullptr),
-      currentStep_(0)
+      currentStep_(0), showSampleBrowser_(false), selectedTrackForSample_(0)
 {
     stepEditor_ = std::make_unique<StepEditor>();
     patternManager_ = std::make_unique<PatternManager>();
     std::memset(patternNameBuffer_, 0, sizeof(patternNameBuffer_));
+    std::memset(samplePathBuffer_, 0, sizeof(samplePathBuffer_));
 }
 
 Window::~Window()
@@ -254,11 +255,100 @@ void Window::renderUI()
         if (stepEditor_ && sequencer_) {
             stepEditor_->render(sequencer_, currentStep_);
         }
+
+        // Sample Browser Button and Track Selection
+        ImGui::Separator();
+        ImGui::Text("Sample Management");
+        
+        if (stepEditor_) {
+            uint32_t selectedTrack = stepEditor_->getSelectedTrack();
+            ImGui::Text("Selected Track: %d - %s", selectedTrack, 
+                        selectedTrack < 8 ? "Drum" : "Unknown");
+            
+            // Load Sample button
+            if (ImGui::Button("Load Sample for Track", ImVec2(150, 0))) {
+                showSampleBrowser_ = true;
+                selectedTrackForSample_ = selectedTrack;
+            }
+            
+            // Show current sample path
+            std::string currentPath = stepEditor_->getTrackSamplePath(selectedTrack);
+            if (!currentPath.empty()) {
+                ImGui::Text("Current: %s", currentPath.c_str());
+            } else {
+                ImGui::TextDisabled("(No sample loaded)");
+            }
+        }
+
         ImGui::End();
+    }
+
+    // Sample Browser Dialog
+    if (showSampleBrowser_) {
+        renderSampleBrowser();
     }
 
     // End frame
     ImGui::Render();
+}
+
+void Window::renderSampleBrowser()
+{
+    ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_FirstUseEver);
+    
+    if (ImGui::Begin("Load Sample", &showSampleBrowser_)) {
+        ImGui::Text("Track: %d", selectedTrackForSample_);
+        
+        ImGui::InputText("Sample Path", samplePathBuffer_, sizeof(samplePathBuffer_));
+        ImGui::SameLine();
+        if (ImGui::Button("Browse...", ImVec2(80, 0))) {
+            // TODO: Open native file dialog (on Windows, use GetOpenFileNameA)
+            // For now, show instructions
+            ImGui::OpenPopup("file_browser_help");
+        }
+        
+        ImGui::Separator();
+        
+        // Common samples directory suggestion
+        ImGui::TextDisabled("Suggested path: assets/samples/");
+        ImGui::TextDisabled("Supported: WAV files");
+        
+        ImGui::Spacing();
+        
+        // Load and Cancel buttons
+        if (ImGui::Button("Load", ImVec2(100, 0))) {
+            if (stepEditor_ && strlen(samplePathBuffer_) > 0) {
+                if (stepEditor_->loadSampleForTrack(selectedTrackForSample_, samplePathBuffer_)) {
+                    std::cout << "[UI] Sample loaded successfully for track " << selectedTrackForSample_ << std::endl;
+                    showSampleBrowser_ = false;
+                } else {
+                    std::cout << "[UI] Failed to load sample" << std::endl;
+                }
+            } else {
+                std::cout << "[UI] Invalid path" << std::endl;
+            }
+        }
+        
+        ImGui::SameLine();
+        
+        if (ImGui::Button("Cancel", ImVec2(100, 0))) {
+            showSampleBrowser_ = false;
+        }
+        
+        // Help popup
+        if (ImGui::BeginPopupModal("file_browser_help", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("File browser not yet implemented.\n\n");
+            ImGui::Text("Workaround: Copy your sample to assets/samples/\n");
+            ImGui::Text("Then type the filename (e.g., my_kick.wav)");
+            
+            if (ImGui::Button("OK")) {
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+        
+        ImGui::End();
+    }
 }
 
 void Window::renderFrame()

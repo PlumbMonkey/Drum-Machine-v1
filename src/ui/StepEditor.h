@@ -40,12 +40,20 @@ public:
     bool isTrackMuted(uint32_t track) const { return mutedTracks_[track]; }
     void setTrackMuted(uint32_t track, bool muted) { mutedTracks_[track] = muted; }
 
+    // Sample management
+    std::string getTrackSamplePath(uint32_t track) const { return trackSamplePaths_[track]; }
+    void setTrackSamplePath(uint32_t track, const std::string& path) { trackSamplePaths_[track] = path; }
+    bool loadSampleForTrack(uint32_t track, const std::string& filePath);
+    bool saveSampleAssignments(const std::string& filePath);
+    bool loadSampleAssignments(const std::string& filePath);
+
 private:
     static constexpr uint32_t NUM_TRACKS = 8;
     static constexpr uint32_t NUM_STEPS = 16;
 
     uint32_t selectedTrack_;
     std::array<bool, NUM_TRACKS> mutedTracks_;
+    std::array<std::string, NUM_TRACKS> trackSamplePaths_;  // Sample path for each track
     SamplePlayer* samplePlayer_;  // For triggering samples on pad clicks
     std::array<SamplePlayer*, NUM_TRACKS> samplePlayers_;  // All 8 sample players for pad preview
 

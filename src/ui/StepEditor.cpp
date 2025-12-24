@@ -157,4 +157,51 @@ void StepEditor::renderStepGrid(Sequencer* sequencer, uint32_t currentStep)
     ImGui::PopButtonRepeat();
 }
 
+bool StepEditor::loadSampleForTrack(uint32_t track, const std::string& filePath)
+{
+    if (track >= NUM_TRACKS) {
+        std::cerr << "[SAMPLE_LOAD] Invalid track: " << track << std::endl;
+        return false;
+    }
+
+    if (!samplePlayers_[track]) {
+        std::cerr << "[SAMPLE_LOAD] No sample player for track " << track << std::endl;
+        return false;
+    }
+
+    // Load the sample into the track's sample player
+    if (samplePlayers_[track]->loadSample(filePath)) {
+        trackSamplePaths_[track] = filePath;
+        std::cout << "[SAMPLE_LOAD] Track " << track << " loaded: " << filePath 
+                  << " (" << samplePlayers_[track]->getDurationSeconds() << "s)" << std::endl;
+        return true;
+    }
+
+    std::cerr << "[SAMPLE_LOAD] Failed to load sample for track " << track << ": " << filePath << std::endl;
+    return false;
+}
+
+bool StepEditor::saveSampleAssignments(const std::string& filePath)
+{
+    // This will require JSON library - implementation ready for integration
+    // For now, log the intent
+    std::cout << "[SAMPLE_SAVE] Would save sample assignments to: " << filePath << std::endl;
+    
+    // TODO: Use nlohmann/json to save trackSamplePaths_ array to JSON
+    // Structure: { "tracks": [ { "name": "Kick", "samplePath": "path/to/kick.wav" }, ... ] }
+    
+    return true;
+}
+
+bool StepEditor::loadSampleAssignments(const std::string& filePath)
+{
+    // This will require JSON library - implementation ready for integration
+    // For now, log the intent
+    std::cout << "[SAMPLE_LOAD] Would load sample assignments from: " << filePath << std::endl;
+    
+    // TODO: Use nlohmann/json to load trackSamplePaths_ array from JSON
+    
+    return true;
+}
+
 } // namespace DrumMachine

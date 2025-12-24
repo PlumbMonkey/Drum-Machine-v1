@@ -71,12 +71,16 @@ private:
 
     // ImGui state
     char patternNameBuffer_[256];
+    char samplePathBuffer_[512];  // For sample browser file input
     uint32_t currentStep_;  // Current playhead position for visualization
+    bool showSampleBrowser_;  // Toggle sample browser dialog
+    uint32_t selectedTrackForSample_;  // Which track to load sample into
 
     // Internal methods
     void handleEvents();
     void renderUI();
     void renderFrame();
+    void renderSampleBrowser();  // Sample loading UI
 };
 
 } // namespace DrumMachine
