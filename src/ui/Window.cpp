@@ -1,5 +1,6 @@
 #include "Window.h"
 #include "StepEditor.h"
+#include "PatternManager.h"
 #include "../audio/AudioEngine.h"
 #include "../sequencer/Sequencer.h"
 #include <SDL2/SDL.h>
@@ -7,6 +8,7 @@
 #include <backends/imgui_impl_sdl2.h>
 #include <backends/imgui_impl_opengl3.h>
 #include <iostream>
+#include <cstring>
 
 namespace DrumMachine {
 
@@ -14,9 +16,12 @@ Window::Window(uint32_t width, uint32_t height)
     : width_(width), height_(height), isOpen_(true),
       sdlWindow_(nullptr), glContext_(nullptr),
       audioEngine_(nullptr), sequencer_(nullptr),
-      showDemoWindow_(false), currentStep_(0)
+      showDemoWindow_(false), showSaveDialog_(false), 
+      showLoadDialog_(false), currentStep_(0)
 {
     stepEditor_ = std::make_unique<StepEditor>();
+    patternManager_ = std::make_unique<PatternManager>();
+    std::memset(patternNameBuffer_, 0, sizeof(patternNameBuffer_));
 }
 
 Window::~Window()
@@ -136,6 +141,13 @@ void Window::renderUI()
     // Main menu bar
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Save Pattern", "Ctrl+S")) {
+                showSaveDialog_ = true;
+            }
+            if (ImGui::MenuItem("Load Pattern", "Ctrl+O")) {
+                showLoadDialog_ = true;
+            }
+            ImGui::Separator();
             if (ImGui::MenuItem("Exit", "ESC")) {
                 isOpen_ = false;
             }
@@ -184,6 +196,106 @@ void Window::renderUI()
         }
 
         ImGui::End();
+    }
+
+    // Save Pattern Dialog
+    if (showSaveDialog_) {
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        if (ImGui::BeginPopupModal("Save Pattern", &showSaveDialog_, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Pattern name:");
+            ImGui::InputText("##patternName", patternNameBuffer_, sizeof(patternNameBuffer_));
+
+            ImGui::Spacing();
+            ImGui::Separator();
+
+            if (ImGui::Button("Save", ImVec2(120, 0))) {
+                if (patternNameBuffer_[0] != '\0' && sequencer_) {
+                    const Pattern& pattern = sequencer_->getPattern();
+                    if (patternManager_->savePattern(patternNameBuffer_, pattern)) {
+                        ImGui::OpenPopup("Save Success");
+                    } else {
+                        ImGui::OpenPopup("Save Error");
+                    }
+                    std::memset(patternNameBuffer_, 0, sizeof(patternNameBuffer_));
+                    showSaveDialog_ = false;
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                std::memset(patternNameBuffer_, 0, sizeof(patternNameBuffer_));
+                showSaveDialog_ = false;
+            }
+
+            ImGui::EndPopup();
+        }
+    }
+
+    // Load Pattern Dialog
+    if (showLoadDialog_) {
+        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        if (ImGui::BeginPopupModal("Load Pattern", &showLoadDialog_, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Available patterns:");
+            ImGui::Separator();
+
+            const auto availablePatterns = patternManager_->getAvailablePatterns();
+            for (const auto& patternFile : availablePatterns) {
+                if (ImGui::Button(patternFile.c_str(), ImVec2(300, 0))) {
+                    if (sequencer_ && patternManager_->loadPattern(patternFile, sequencer_->getPattern())) {
+                        ImGui::OpenPopup("Load Success");
+                    } else {
+                        ImGui::OpenPopup("Load Error");
+                    }
+                    showLoadDialog_ = false;
+                }
+            }
+
+            if (availablePatterns.empty()) {
+                ImGui::Text("No patterns found.");
+            }
+
+            ImGui::Spacing();
+            ImGui::Separator();
+
+            if (ImGui::Button("Close", ImVec2(300, 0))) {
+                showLoadDialog_ = false;
+            }
+
+            ImGui::EndPopup();
+        }
+    }
+
+    // Success/Error popups
+    if (ImGui::BeginPopupModal("Save Success", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Pattern saved successfully!");
+        if (ImGui::Button("OK", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginPopupModal("Load Success", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Pattern loaded successfully!");
+        if (ImGui::Button("OK", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginPopupModal("Save Error", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Failed to save pattern.");
+        if (ImGui::Button("OK", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginPopupModal("Load Error", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("Failed to load pattern.");
+        if (ImGui::Button("OK", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
     }
 
     // Step Editor

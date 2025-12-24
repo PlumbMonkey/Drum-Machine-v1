@@ -11,6 +11,7 @@ namespace DrumMachine {
 class AudioEngine;
 class Sequencer;
 class StepEditor;
+class PatternManager;
 
 /**
  * Window
@@ -56,9 +57,13 @@ private:
 
     // UI components
     std::unique_ptr<StepEditor> stepEditor_;
+    std::unique_ptr<PatternManager> patternManager_;
 
     // ImGui state
     bool showDemoWindow_;
+    bool showSaveDialog_;
+    bool showLoadDialog_;
+    char patternNameBuffer_[256];
     uint32_t currentStep_;  // Current playhead position for visualization
 
     // Internal methods

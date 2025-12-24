@@ -109,6 +109,7 @@ set(UI_SOURCES
     src/ui/AssetManager.cpp
     src/ui/Window.cpp
     src/ui/StepEditor.cpp
+    src/ui/PatternManager.cpp
 )
 
 set(DATA_SOURCES
