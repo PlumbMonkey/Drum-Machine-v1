@@ -1,4 +1,5 @@
 #include "Window.h"
+#include "StepEditor.h"
 #include "../audio/AudioEngine.h"
 #include "../sequencer/Sequencer.h"
 #include <SDL2/SDL.h>
@@ -13,8 +14,9 @@ Window::Window(uint32_t width, uint32_t height)
     : width_(width), height_(height), isOpen_(true),
       sdlWindow_(nullptr), glContext_(nullptr),
       audioEngine_(nullptr), sequencer_(nullptr),
-      showDemoWindow_(false)
+      showDemoWindow_(false), currentStep_(0)
 {
+    stepEditor_ = std::make_unique<StepEditor>();
 }
 
 Window::~Window()
@@ -171,6 +173,9 @@ void Window::renderUI()
             }
         }
 
+        ImGui::Spacing();
+        ImGui::Text("Current Step: %u / 15", currentStep_);
+
         // Update sequencer with UI values
         if (sequencer_) {
             sequencer_->getTransport().setTempo(tempo);
@@ -179,6 +184,16 @@ void Window::renderUI()
         }
 
         ImGui::End();
+    }
+
+    // Step Editor
+    if (stepEditor_ && sequencer_) {
+        stepEditor_->render(sequencer_, currentStep_);
+    }
+
+    // Update current step position (simple calculation for demo)
+    if (sequencer_) {
+        currentStep_ = (currentStep_ + 1) % 16;
     }
 
     // Demo window

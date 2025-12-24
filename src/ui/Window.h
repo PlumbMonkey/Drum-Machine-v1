@@ -10,6 +10,7 @@ namespace DrumMachine {
 
 class AudioEngine;
 class Sequencer;
+class StepEditor;
 
 /**
  * Window
@@ -53,8 +54,12 @@ private:
     AudioEngine* audioEngine_;
     Sequencer* sequencer_;
 
+    // UI components
+    std::unique_ptr<StepEditor> stepEditor_;
+
     // ImGui state
     bool showDemoWindow_;
+    uint32_t currentStep_;  // Current playhead position for visualization
 
     // Internal methods
     void handleEvents();
