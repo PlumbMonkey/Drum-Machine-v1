@@ -70,29 +70,31 @@ void StepEditor::renderStepGrid(Sequencer* sequencer, uint32_t currentStep)
     ImGui::Text("Steps");
     ImGui::Separator();
 
-    // Step numbers header
-    ImGui::Spacing();
-    ImGui::Text("Step: ");
-    ImGui::SameLine();
-    for (uint32_t step = 0; step < NUM_STEPS; ++step) {
-        ImGui::SameLine();
-        ImGui::Text("%d", step);
-        if (step < NUM_STEPS - 1) ImGui::SameLine();
-    }
-
-    // Step buttons grid
+    // Step numbers header with proper alignment
     ImGui::Spacing();
     float buttonSize = 30.0f;
+    float spacingX = 4.0f;
+    float labelWidth = 80.0f;
+
+    // Header row
+    ImGui::Text("Track");
+    ImGui::SameLine(labelWidth);
+    for (uint32_t step = 0; step < NUM_STEPS; ++step) {
+        ImGui::Text("%d", step);
+        ImGui::SameLine(labelWidth + (step + 1) * (buttonSize + spacingX));
+    }
+    ImGui::NewLine();
+
+    // Step buttons grid with fixed positioning
     ImGui::PushButtonRepeat(false);
 
     for (uint32_t track = 0; track < NUM_TRACKS; ++track) {
         // Track label
         ImGui::Text("%s", trackNames_[track]);
-        ImGui::SameLine();
-        ImGui::Spacing();
-        ImGui::SameLine();
+        ImGui::SameLine(labelWidth);
 
         // Step buttons for this track
+        float xPos = labelWidth;
         for (uint32_t step = 0; step < NUM_STEPS; ++step) {
             ImGui::PushID(track * NUM_STEPS + step);
 
@@ -113,7 +115,8 @@ void StepEditor::renderStepGrid(Sequencer* sequencer, uint32_t currentStep)
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 1.0f, 1.0f, 0.5f));
             ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 1.0f, 1.0f, 0.8f));
 
-            // Draw button
+            // Draw button at fixed position
+            ImGui::SetCursorPosX(xPos);
             if (ImGui::Button("##step", ImVec2(buttonSize, buttonSize))) {
                 // Toggle step
                 pattern.setStepActive(track, step, !isEnabled);
@@ -127,8 +130,8 @@ void StepEditor::renderStepGrid(Sequencer* sequencer, uint32_t currentStep)
             }
 
             ImGui::PopID();
+            xPos += buttonSize + spacingX;
 
-            // Add spacing between buttons, new line after 16 steps
             if (step < NUM_STEPS - 1) {
                 ImGui::SameLine();
             }
