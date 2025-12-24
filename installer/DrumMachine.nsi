@@ -29,7 +29,7 @@ VIAddVersionKey "LegalCopyright" "MIT License"
 
 ; Build from directory where NSIS is run
 ; Expected: run from d:\Dev Projects 2025\Drum Machine-v1\installer\
-; Sources: ..\build\bin\Release\ and ..\assets\
+; Sources: ..\build\bin\Release\ and ..\assets
 
 ; Installer Section
 Section "Install"
@@ -44,9 +44,6 @@ Section "Install"
     ; Copy assets and samples
     SetOutPath "$INSTDIR\assets\samples"
     File /nonfatal "D:\Dev Projects 2025\Drum Machine-v1\assets\samples\*.*"
-    
-    SetOutPath "$INSTDIR\assets\images"
-    File /nonfatal /r "D:\Dev Projects 2025\Drum Machine-v1\assets\images\*.*"
     
     ; Create directories for user content
     CreateDirectory "$INSTDIR\patterns"
