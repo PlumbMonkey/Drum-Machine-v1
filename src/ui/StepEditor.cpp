@@ -110,13 +110,8 @@ void StepEditor::renderStepGrid(Sequencer* sequencer, uint32_t currentStep)
             // Draw button at fixed position
             ImGui::SetCursorPosX(xPos);
             if (ImGui::Button("##step", ImVec2(buttonSize, buttonSize))) {
-                // Toggle step
+                // Toggle step in pattern
                 pattern.setStepActive(track, step, !isEnabled);
-                
-                // If this is the kick track (track 0) and we just enabled it, trigger the sample
-                if (track == 0 && samplePlayer_ && !isEnabled) {
-                    samplePlayer_->trigger();
-                }
             }
 
             ImGui::PopStyleColor(3);

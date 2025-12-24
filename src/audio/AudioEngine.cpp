@@ -122,11 +122,10 @@ int AudioEngine::processAudio(void* outputBuffer, unsigned int nFrames)
     }
 
     // Get audio from sample player (if available and playing)
+    // Always loop - pad clicks trigger the sample, and Play starts looping playback
     if (samplePlayer_ && samplePlayer_->isPlaying()) {
-        // Check if any step is currently active - if so, play sample
-        // For now, just keep playing if started
         std::vector<float> monoBuffer(nFrames);
-        samplePlayer_->readFrames(monoBuffer.data(), nFrames, false);  // No looping - play once
+        samplePlayer_->readFrames(monoBuffer.data(), nFrames, true);  // Loop the sample
         
         // Convert mono to stereo (duplicate to both channels) with gain
         const float gain = 0.8f;

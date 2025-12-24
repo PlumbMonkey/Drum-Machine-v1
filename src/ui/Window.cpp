@@ -179,7 +179,8 @@ void Window::renderUI()
                 }
             } else {
                 if (ImGui::Button("Play##audio", ImVec2(60, 0))) {
-                    samplePlayer_->start();
+                    samplePlayer_->reset();  // Reset to beginning first
+                    samplePlayer_->start();  // Then start looping
                 }
             }
             ImGui::SameLine();

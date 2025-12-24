@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
         return 1;
     }
     std::cout << "      Sample OK (" << samplePlayer.getDurationSeconds() << " seconds)" << std::endl;
-    samplePlayer.start();
+    // Don't auto-start - user will click Play button
     audioEngine.setSamplePlayer(&samplePlayer);  // Wire sample player to audio engine
     std::cout << std::endl;
 
