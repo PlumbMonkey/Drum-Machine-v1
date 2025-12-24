@@ -110,6 +110,7 @@ set(UI_SOURCES
     src/ui/Window.cpp
     src/ui/StepEditor.cpp
     src/ui/PatternManager.cpp
+    src/ui/SwingVisualizer.cpp
 )
 
 set(DATA_SOURCES

@@ -1,6 +1,7 @@
 #include "Window.h"
 #include "StepEditor.h"
 #include "PatternManager.h"
+#include "SwingVisualizer.h"
 #include "../audio/AudioEngine.h"
 #include "../sequencer/Sequencer.h"
 #include <SDL2/SDL.h>
@@ -21,6 +22,7 @@ Window::Window(uint32_t width, uint32_t height)
 {
     stepEditor_ = std::make_unique<StepEditor>();
     patternManager_ = std::make_unique<PatternManager>();
+    swingVisualizer_ = std::make_unique<SwingVisualizer>();
     std::memset(patternNameBuffer_, 0, sizeof(patternNameBuffer_));
 }
 
@@ -165,10 +167,12 @@ void Window::renderUI()
     // Transport control panel
     if (ImGui::Begin("Transport", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         static float tempo = 120.0f;
+        static float swing = 0.0f;
         static int timeSignatureIndex = 0;
         const char* timeSignatures[] = {"4/4", "3/4", "6/8"};
 
         bool tempoChanged = ImGui::SliderFloat("Tempo (BPM)", &tempo, 60.0f, 180.0f);
+        bool swingChanged = ImGui::SliderFloat("Swing", &swing, 0.0f, 0.6f, "%.2f");
         bool timeSignatureChanged = ImGui::Combo("Time Signature", &timeSignatureIndex, timeSignatures, 3);
 
         ImGui::Spacing();
@@ -212,6 +216,9 @@ void Window::renderUI()
         if (sequencer_) {
             if (tempoChanged) {
                 sequencer_->getTransport().setTempo(tempo);
+            }
+            if (swingChanged) {
+                sequencer_->getTransport().setSwing(swing);
             }
             if (timeSignatureChanged) {
                 const char* tsValue = timeSignatures[timeSignatureIndex];
@@ -325,6 +332,11 @@ void Window::renderUI()
     // Step Editor
     if (stepEditor_ && sequencer_) {
         stepEditor_->render(sequencer_, currentStep_);
+    }
+
+    // Swing Visualizer
+    if (swingVisualizer_ && sequencer_) {
+        swingVisualizer_->render(sequencer_);
     }
 
     // Demo window

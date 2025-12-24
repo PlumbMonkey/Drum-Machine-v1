@@ -12,6 +12,7 @@ class AudioEngine;
 class Sequencer;
 class StepEditor;
 class PatternManager;
+class SwingVisualizer;
 
 /**
  * Window
@@ -58,6 +59,7 @@ private:
     // UI components
     std::unique_ptr<StepEditor> stepEditor_;
     std::unique_ptr<PatternManager> patternManager_;
+    std::unique_ptr<SwingVisualizer> swingVisualizer_;
 
     // ImGui state
     bool showDemoWindow_;
