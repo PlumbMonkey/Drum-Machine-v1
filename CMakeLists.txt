@@ -61,8 +61,15 @@ FetchContent_Declare(
     GIT_TAG v1.90.4
 )
 
+# Fetch RtMidi (MIT License)
+FetchContent_Declare(
+    rtmidi
+    GIT_REPOSITORY https://github.com/thestk/rtmidi.git
+    GIT_TAG master
+)
+
 # Make available
-FetchContent_MakeAvailable(rtaudio nlohmann_json dr_wav SDL2 imgui)
+FetchContent_MakeAvailable(rtaudio rtmidi nlohmann_json dr_wav SDL2 imgui)
 
 # Get dr_wav and rtaudio source dirs
 FetchContent_GetProperties(dr_wav SOURCE_DIR DR_WAV_SOURCE_DIR)
@@ -92,10 +99,14 @@ include_directories(${IMGUI_SOURCE_DIR})
 include_directories(${IMGUI_SOURCE_DIR}/backends)
 include_directories(${SDL2_SOURCE_DIR}/include)
 
+FetchContent_GetProperties(rtmidi SOURCE_DIR RTMIDI_SOURCE_DIR)
+include_directories(${RTMIDI_SOURCE_DIR})
+
 # Source files
 set(AUDIO_SOURCES
     src/audio/AudioEngine.cpp
     src/audio/SamplePlayer.cpp
+    src/audio/MidiManager.cpp
 )
 
 set(SEQUENCER_SOURCES
@@ -112,6 +123,7 @@ set(UI_SOURCES
     src/ui/PatternManager.cpp
     src/ui/SwingVisualizer.cpp
     src/ui/SampleBrowser.cpp
+    src/ui/MidiController.cpp
 )
 
 set(DATA_SOURCES
@@ -136,6 +148,7 @@ add_executable(DrumMachine
 # Link libraries
 target_link_libraries(DrumMachine PRIVATE 
     rtaudio
+    rtmidi
     nlohmann_json::nlohmann_json
     SDL2::SDL2
     OpenGL::GL

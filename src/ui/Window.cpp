@@ -3,7 +3,9 @@
 #include "PatternManager.h"
 #include "SwingVisualizer.h"
 #include "SampleBrowser.h"
+#include "MidiController.h"
 #include "../audio/AudioEngine.h"
+#include "../audio/MidiManager.h"
 #include "../sequencer/Sequencer.h"
 #include <SDL2/SDL.h>
 #include <imgui.h>
@@ -17,7 +19,7 @@ namespace DrumMachine {
 Window::Window(uint32_t width, uint32_t height)
     : width_(width), height_(height), isOpen_(true),
       sdlWindow_(nullptr), glContext_(nullptr),
-      audioEngine_(nullptr), sequencer_(nullptr),
+      audioEngine_(nullptr), sequencer_(nullptr), midiManager_(nullptr),
       showDemoWindow_(false), showSaveDialog_(false), 
       showLoadDialog_(false), currentStep_(0)
 {
@@ -25,6 +27,7 @@ Window::Window(uint32_t width, uint32_t height)
     patternManager_ = std::make_unique<PatternManager>();
     swingVisualizer_ = std::make_unique<SwingVisualizer>();
     sampleBrowser_ = std::make_unique<SampleBrowser>();
+    midiController_ = std::make_unique<MidiController>();
     std::memset(patternNameBuffer_, 0, sizeof(patternNameBuffer_));
 }
 
@@ -346,6 +349,11 @@ void Window::renderUI()
     // Swing Visualizer
     if (swingVisualizer_ && sequencer_) {
         swingVisualizer_->render(sequencer_);
+    }
+
+    // MIDI Controller
+    if (midiController_ && midiManager_) {
+        midiController_->render(midiManager_);
     }
 
     // Demo window

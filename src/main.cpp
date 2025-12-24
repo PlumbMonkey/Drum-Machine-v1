@@ -1,6 +1,7 @@
 #include "DrumMachine.h"
 #include "audio/AudioEngine.h"
 #include "audio/SamplePlayer.h"
+#include "audio/MidiManager.h"
 #include "sequencer/Sequencer.h"
 #include "sequencer/Transport.h"
 #include "ui/Window.h"
@@ -9,20 +10,20 @@
 using namespace DrumMachine;
 
 /**
- * Milestone 2: UI Scaffolding
+ * Milestone 5: MIDI Foundation
  * 
- * Goal: Create interactive ImGui interface with audio engine running in background.
- * - SDL2 window with OpenGL context
- * - ImGui immediate-mode interface
- * - Transport controls (play/pause, tempo, time signature)
- * - Real-time audio playback
+ * Goal: Add MIDI input support for external controllers.
+ * - RtMidi integration for MIDI port management
+ * - MIDI note triggering for drum pads
+ * - MIDI CC parameter control
+ * - Event publishing via ParameterBus
  */
 
 int main(int argc, char* argv[])
 {
     std::cout << "======================================" << std::endl;
     std::cout << "Drum Machine v" << DRUM_MACHINE_VERSION << std::endl;
-    std::cout << "Milestone 2: UI Scaffolding" << std::endl;
+    std::cout << "Milestone 5: MIDI Foundation" << std::endl;
     std::cout << "======================================" << std::endl;
     std::cout << std::endl;
 
@@ -62,8 +63,17 @@ int main(int argc, char* argv[])
     samplePlayer.start();
     std::cout << std::endl;
 
+    // Initialize MIDI manager
+    std::cout << "[4/5] Initializing MIDI..." << std::endl;
+    MidiManager midiManager;
+    if (!midiManager.initialize()) {
+        std::cerr << "WARNING: MIDI initialization failed" << std::endl;
+    }
+    std::cout << "      MIDI OK" << std::endl;
+    std::cout << std::endl;
+
     // Initialize window and UI
-    std::cout << "[4/4] Initializing UI..." << std::endl;
+    std::cout << "[5/5] Initializing UI..." << std::endl;
     Window window(1280, 720);
     if (!window.initialize()) {
         std::cerr << "FAILED to initialize window" << std::endl;
@@ -72,6 +82,7 @@ int main(int argc, char* argv[])
     }
     window.setAudioEngine(&audioEngine);
     window.setSequencer(&sequencer);
+    window.setMidiManager(&midiManager);
     std::cout << "      UI OK" << std::endl;
     std::cout << std::endl;
 
@@ -92,6 +103,7 @@ int main(int argc, char* argv[])
     // Cleanup
     samplePlayer.stop();
     window.shutdown();
+    midiManager.shutdown();
     audioEngine.shutdown();
 
     std::cout << "Drum Machine shutdown cleanly" << std::endl;

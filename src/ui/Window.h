@@ -14,6 +14,8 @@ class StepEditor;
 class PatternManager;
 class SwingVisualizer;
 class SampleBrowser;
+class MidiManager;
+class MidiController;
 
 /**
  * Window
@@ -41,6 +43,7 @@ public:
     // Set references to audio/sequencer for UI control
     void setAudioEngine(AudioEngine* audioEngine) { audioEngine_ = audioEngine; }
     void setSequencer(Sequencer* sequencer) { sequencer_ = sequencer; }
+    void setMidiManager(MidiManager* midiManager) { midiManager_ = midiManager; }
 
     // Getters
     uint32_t getWidth() const { return width_; }
@@ -56,12 +59,14 @@ private:
 
     AudioEngine* audioEngine_;
     Sequencer* sequencer_;
+    MidiManager* midiManager_;
 
     // UI components
     std::unique_ptr<StepEditor> stepEditor_;
     std::unique_ptr<PatternManager> patternManager_;
     std::unique_ptr<SwingVisualizer> swingVisualizer_;
     std::unique_ptr<SampleBrowser> sampleBrowser_;
+    std::unique_ptr<MidiController> midiController_;
 
     // ImGui state
     bool showDemoWindow_;
