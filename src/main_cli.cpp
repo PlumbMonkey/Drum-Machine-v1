@@ -4,36 +4,23 @@
 #include "audio/MidiManager.h"
 #include "sequencer/Sequencer.h"
 #include "sequencer/Transport.h"
-#include "ui/Window.h"
 #include <iostream>
-#include <fstream>
+#include <chrono>
+#include <thread>
 
 using namespace DrumMachine;
 
 /**
- * Milestone 5: MIDI Foundation
- * 
- * Goal: Add MIDI input support for external controllers.
- * - RtMidi integration for MIDI port management
- * - MIDI note triggering for drum pads
- * - MIDI CC parameter control
- * - Event publishing via ParameterBus
+ * CLI Version - No UI
+ * Tests core audio/sequencer functionality without SDL2/OpenGL
  */
-
 int main(int argc, char* argv[])
 {
-    try {
-    // Open error log file for Windows GUI apps that lose console output
-    std::ofstream logFile("DrumMachine_error.log", std::ios::app);
-    
     std::cout << "======================================" << std::endl;
     std::cout << "Drum Machine v" << DRUM_MACHINE_VERSION << std::endl;
-    std::cout << "Milestone 5: MIDI Foundation" << std::endl;
+    std::cout << "Milestone 5: MIDI Foundation (CLI)" << std::endl;
     std::cout << "======================================" << std::endl;
     std::cout << std::endl;
-    
-    logFile << "Drum Machine started" << std::endl;
-    logFile.flush();
 
     // Configuration
     uint32_t sampleRate = 44100;
@@ -72,63 +59,41 @@ int main(int argc, char* argv[])
     std::cout << std::endl;
 
     // Initialize MIDI manager
-    std::cout << "[4/5] Initializing MIDI..." << std::endl;
+    std::cout << "[4/4] Initializing MIDI..." << std::endl;
     MidiManager midiManager;
     if (!midiManager.initialize()) {
-        std::cerr << "WARNING: MIDI initialization failed" << std::endl;
+        std::cout << "      WARNING: MIDI initialization failed (continuing without MIDI)" << std::endl;
+    } else {
+        std::cout << "      MIDI OK" << std::endl;
     }
-    std::cout << "      MIDI OK" << std::endl;
     std::cout << std::endl;
 
-    // Initialize window and UI
-    std::cout << "[5/5] Initializing UI..." << std::endl;
-    Window window(1280, 720);
-    if (!window.initialize()) {
-        std::cerr << "FAILED to initialize window" << std::endl;
-        logFile << "ERROR: Failed to initialize window" << std::endl;
-        logFile.close();
-        audioEngine.shutdown();
-        return 1;
-    }
-    window.setAudioEngine(&audioEngine);
-    window.setSequencer(&sequencer);
-    window.setMidiManager(&midiManager);
-    std::cout << "      UI OK" << std::endl;
+    std::cout << "Audio engine running for 30 seconds..." << std::endl;
+    std::cout << "Press Ctrl+C to exit early" << std::endl;
     std::cout << std::endl;
 
-    std::cout << "Starting main event loop..." << std::endl;
-    std::cout << "Press ESC to exit" << std::endl;
-    std::cout << std::endl;
-
-    // Main loop
-    while (window.isOpen()) {
-        if (!window.processFrame()) {
-            break;
-        }
+    // Run for 30 seconds
+    auto start = std::chrono::steady_clock::now();
+    auto duration = std::chrono::seconds(30);
+    
+    while (std::chrono::steady_clock::now() - start < duration) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        uint64_t frames = audioEngine.getTotalFramesProcessed();
+        double seconds = static_cast<double>(frames) / sampleRate;
+        std::cout << "\rRunning: " << seconds << " seconds (" << frames << " frames)" << std::flush;
     }
 
+    std::cout << std::endl << std::endl;
+    std::cout << "Test complete!" << std::endl;
+    std::cout << "Total frames processed: " << audioEngine.getTotalFramesProcessed() << std::endl;
     std::cout << std::endl;
-    std::cout << "Shutting down..." << std::endl;
 
     // Cleanup
+    std::cout << "Shutting down..." << std::endl;
     samplePlayer.stop();
-    window.shutdown();
     midiManager.shutdown();
     audioEngine.shutdown();
 
     std::cout << "Drum Machine shutdown cleanly" << std::endl;
-    logFile << "Shutdown successful" << std::endl;
-    logFile.close();
     return 0;
-    } catch (const std::exception& e) {
-        std::ofstream logFile("DrumMachine_error.log", std::ios::app);
-        logFile << "EXCEPTION: " << e.what() << std::endl;
-        logFile.close();
-        return 1;
-    } catch (...) {
-        std::ofstream logFile("DrumMachine_error.log", std::ios::app);
-        logFile << "UNKNOWN EXCEPTION" << std::endl;
-        logFile.close();
-        return 1;
-    }
 }

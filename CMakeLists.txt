@@ -137,27 +137,48 @@ set(DATA_SOURCES
 
 set(CORE_SOURCES
     src/core/ParameterBus.cpp
-    src/main.cpp
 )
+
+# Option to build CLI version instead of GUI
+option(BUILD_CLI_ONLY "Build CLI version without UI (no SDL2/OpenGL required)" OFF)
+
+if(BUILD_CLI_ONLY)
+    message(STATUS "Building CLI version (no UI)")
+    set(MAIN_SOURCE src/main_cli.cpp)
+else()
+    message(STATUS "Building GUI version with UI")
+    set(MAIN_SOURCE src/main.cpp)
+endif()
 
 # Main executable
 add_executable(DrumMachine
+    ${MAIN_SOURCE}
     ${CORE_SOURCES}
     ${AUDIO_SOURCES}
     ${SEQUENCER_SOURCES}
-    ${UI_SOURCES}
+    $<$<NOT:$<BOOL:${BUILD_CLI_ONLY}>>:${UI_SOURCES}>
+    $<$<NOT:$<BOOL:${BUILD_CLI_ONLY}>>:${IMGUI_SOURCES}>
     ${DATA_SOURCES}
-    ${IMGUI_SOURCES}
 )
 
 # Link libraries
-target_link_libraries(DrumMachine PRIVATE 
-    rtaudio
-    rtmidi
-    nlohmann_json::nlohmann_json
-    SDL2::SDL2
-    OpenGL::GL
-)
+if(BUILD_CLI_ONLY)
+    # CLI version only needs audio libraries
+    target_link_libraries(DrumMachine PRIVATE 
+        rtaudio
+        rtmidi
+        nlohmann_json::nlohmann_json
+    )
+else()
+    # GUI version needs UI libraries
+    target_link_libraries(DrumMachine PRIVATE 
+        rtaudio
+        rtmidi
+        nlohmann_json::nlohmann_json
+        SDL2::SDL2
+        OpenGL::GL
+    )
+endif()
 
 # Platform-specific audio API
 if(WIN32)
