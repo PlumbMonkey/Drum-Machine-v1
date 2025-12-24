@@ -1,0 +1,214 @@
+name: Build Cross-Platform Installers
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-windows:
+    name: Build Windows Installer
+    runs-on: windows-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install NSIS
+        run: |
+          choco install nsis -y
+          
+      - name: Install CMake
+        uses: jwlawson/actions-setup-cmake@v1
+        with:
+          cmake-version: '3.24.x'
+      
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+      
+      - name: Create Build Directory
+        run: |
+          mkdir build
+          cd build
+      
+      - name: Configure CMake
+        run: |
+          cd build
+          cmake .. -G "Visual Studio 17 2022"
+      
+      - name: Build Release
+        run: |
+          cd build
+          cmake --build . --config Release
+      
+      - name: Create NSIS Installer
+        run: |
+          cd installer
+          & "C:\Program Files (x86)\NSIS\makensis.exe" DrumMachine.nsi
+      
+      - name: Upload Windows Installer
+        uses: actions/upload-artifact@v3
+        with:
+          name: DrumMachine-Windows
+          path: installer/DrumMachine-0.1.0-Windows.exe
+          retention-days: 30
+
+  build-macos:
+    name: Build macOS DMG
+    runs-on: macos-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: |
+          brew install cmake sdl2
+      
+      - name: Create Build Directory
+        run: |
+          mkdir build
+          cd build
+      
+      - name: Configure CMake
+        run: |
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+      
+      - name: Build Release
+        run: |
+          cd build
+          cmake --build . --config Release
+      
+      - name: Create App Bundle
+        run: |
+          chmod +x installer/create_macos_bundle.sh
+          installer/create_macos_bundle.sh
+      
+      - name: Create DMG
+        run: |
+          cd build
+          hdiutil create -volname "Drum Machine" \
+            -srcfolder DrumMachine.app \
+            -ov -format UDZO \
+            DrumMachine-0.1.0-macOS.dmg
+      
+      - name: Upload macOS DMG
+        uses: actions/upload-artifact@v3
+        with:
+          name: DrumMachine-macOS
+          path: build/DrumMachine-0.1.0-macOS.dmg
+          retention-days: 30
+
+  build-linux:
+    name: Build Linux AppImage
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake git \
+            libsdl2-dev \
+            libasound2-dev \
+            libjack-dev
+      
+      - name: Download linuxdeploy
+        run: |
+          cd installer
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage
+      
+      - name: Create Build Directory
+        run: |
+          mkdir build
+          cd build
+      
+      - name: Configure CMake
+        run: |
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+      
+      - name: Build Release
+        run: |
+          cd build
+          cmake --build . --config Release
+      
+      - name: Create AppImage
+        run: |
+          cd build
+          chmod +x ../installer/create_linux_appimage.sh
+          ../installer/create_linux_appimage.sh
+          ../installer/linuxdeploy-x86_64.AppImage \
+            --appimage-extract-and-run \
+            --appdir=DrumMachine.AppDir \
+            --output=appimage
+      
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v3
+        with:
+          name: DrumMachine-Linux
+          path: build/DrumMachine-*.AppImage
+          retention-days: 30
+
+  create-release:
+    name: Create GitHub Release
+    needs: [build-windows, build-macos, build-linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: DrumMachine-Windows
+          path: ./release
+      
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: DrumMachine-macOS
+          path: ./release
+      
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: DrumMachine-Linux
+          path: ./release
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/*
+          body: |
+            # Drum Machine v0.1.0 Release
+            
+            Professional step sequencer and sample player for Windows, macOS, and Linux.
+            
+            ## Installation
+            
+            ### Windows
+            Download and run `DrumMachine-0.1.0-Windows.exe` - it will create a desktop shortcut automatically.
+            
+            ### macOS
+            Download `DrumMachine-0.1.0-macOS.dmg`, mount it, and drag the app to Applications folder.
+            
+            ### Linux
+            Download `DrumMachine-0.1.0-x86_64.AppImage`, make it executable, and run it:
+            ```bash
+            chmod +x DrumMachine-0.1.0-x86_64.AppImage
+            ./DrumMachine-0.1.0-x86_64.AppImage
+            ```
+            
+            ## Features
+            - 8 tracks × 16-step drum sequencer
+            - Real-time audio playback with sample-accurate timing
+            - MIDI controller support
+            - Pattern save/load (JSON + MIDI formats)
+            - Swing control and visualization
+            - Cross-platform support
