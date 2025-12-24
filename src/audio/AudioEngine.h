@@ -9,6 +9,7 @@
 namespace DrumMachine {
 
 class Sequencer; // Forward declaration
+class SamplePlayer; // Forward declaration
 
 /**
  * AudioEngine
@@ -42,10 +43,14 @@ public:
     // Set sequencer reference (for playback callback)
     void setSequencer(Sequencer* sequencer);
 
+    // Set sample player reference (for audio output)
+    void setSamplePlayer(SamplePlayer* samplePlayer);
+
 private:
     uint32_t sampleRate_;
     bool isRunning_;
     Sequencer* sequencer_;
+    SamplePlayer* samplePlayer_;
     std::atomic<uint64_t> totalFramesProcessed_;
     
     // RtAudio instance (forward declared, defined in .cpp)

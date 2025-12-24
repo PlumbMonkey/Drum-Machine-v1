@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
 
     // Configuration
     uint32_t sampleRate = 44100;
-    std::string samplePath = "assets/samples/test_kick.wav";
+    std::string samplePath = "test_kick.wav";  // Look for WAV in exe directory or assets/samples/
 
     // Initialize audio engine
     std::cout << "[1/4] Initializing audio engine..." << std::endl;
@@ -69,6 +69,7 @@ int main(int argc, char* argv[])
     }
     std::cout << "      Sample OK (" << samplePlayer.getDurationSeconds() << " seconds)" << std::endl;
     samplePlayer.start();
+    audioEngine.setSamplePlayer(&samplePlayer);  // Wire sample player to audio engine
     std::cout << std::endl;
 
     // Initialize MIDI manager
@@ -101,8 +102,14 @@ int main(int argc, char* argv[])
     std::cout << std::endl;
 
     // Main loop
+    int frameCount = 0;
     while (window.isOpen()) {
+        frameCount++;
+        if (frameCount <= 5 || frameCount % 100 == 0) {
+            std::cout << "Frame " << frameCount << ", isOpen: " << window.isOpen() << std::endl;
+        }
         if (!window.processFrame()) {
+            std::cout << "processFrame returned false" << std::endl;
             break;
         }
     }

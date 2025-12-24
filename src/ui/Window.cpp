@@ -1,9 +1,6 @@
 #include "Window.h"
 #include "StepEditor.h"
 #include "PatternManager.h"
-#include "SwingVisualizer.h"
-#include "SampleBrowser.h"
-#include "MidiController.h"
 #include "../audio/AudioEngine.h"
 #include "../audio/MidiManager.h"
 #include "../sequencer/Sequencer.h"
@@ -14,20 +11,25 @@
 #include <iostream>
 #include <cstring>
 
+// OpenGL functions
+#ifdef _WIN32
+extern "C" {
+    void glClear(unsigned int);
+    void glClearColor(float, float, float, float);
+}
+#define GL_COLOR_BUFFER_BIT 0x00004000
+#endif
+
 namespace DrumMachine {
 
 Window::Window(uint32_t width, uint32_t height)
     : width_(width), height_(height), isOpen_(true),
       sdlWindow_(nullptr), glContext_(nullptr),
       audioEngine_(nullptr), sequencer_(nullptr), midiManager_(nullptr),
-      showDemoWindow_(false), showSaveDialog_(false), 
-      showLoadDialog_(false), currentStep_(0)
+      currentStep_(0)
 {
     stepEditor_ = std::make_unique<StepEditor>();
     patternManager_ = std::make_unique<PatternManager>();
-    swingVisualizer_ = std::make_unique<SwingVisualizer>();
-    sampleBrowser_ = std::make_unique<SampleBrowser>();
-    midiController_ = std::make_unique<MidiController>();
     std::memset(patternNameBuffer_, 0, sizeof(patternNameBuffer_));
 }
 
@@ -61,7 +63,7 @@ bool Window::initialize()
 
     // Create OpenGL context
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
@@ -73,22 +75,20 @@ bool Window::initialize()
         return false;
     }
 
-    SDL_GL_MakeCurrent(reinterpret_cast<SDL_Window*>(sdlWindow_), 
-                      reinterpret_cast<SDL_GLContext>(glContext_));
     SDL_GL_SetSwapInterval(1); // Enable vsync
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-    // Initialize ImGui
+    // Setup ImGui
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
-    // Setup ImGui style
     ImGui::StyleColorsDark();
 
     // Setup ImGui backends
     ImGui_ImplSDL2_InitForOpenGL(reinterpret_cast<SDL_Window*>(sdlWindow_), glContext_);
-    ImGui_ImplOpenGL3_Init("#version 330");
+    ImGui_ImplOpenGL3_Init("#version 150");
 
     std::cout << "Window initialized successfully" << std::endl;
     return true;
@@ -96,18 +96,15 @@ bool Window::initialize()
 
 void Window::shutdown()
 {
-    // Shutdown ImGui
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    // Destroy OpenGL context
     if (glContext_) {
         SDL_GL_DeleteContext(reinterpret_cast<SDL_GLContext>(glContext_));
         glContext_ = nullptr;
     }
 
-    // Destroy SDL window
     if (sdlWindow_) {
         SDL_DestroyWindow(reinterpret_cast<SDL_Window*>(sdlWindow_));
         sdlWindow_ = nullptr;
@@ -145,232 +142,70 @@ void Window::renderUI()
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    // Main menu bar
+    // Simple menu bar
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("Save Pattern", "Ctrl+S")) {
-                showSaveDialog_ = true;
-            }
-            if (ImGui::MenuItem("Load Pattern", "Ctrl+O")) {
-                showLoadDialog_ = true;
-            }
-            ImGui::Separator();
             if (ImGui::MenuItem("Exit", "ESC")) {
                 isOpen_ = false;
             }
             ImGui::EndMenu();
         }
-
-        if (ImGui::BeginMenu("View")) {
-            ImGui::MenuItem("Demo Window", nullptr, &showDemoWindow_);
-            ImGui::EndMenu();
-        }
-
         ImGui::EndMainMenuBar();
     }
 
-    // Transport control panel
-    if (ImGui::Begin("Transport", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    // Transport window - tempo and swing controls
+    ImGui::SetNextWindowPos(ImVec2(10, 30), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(340, 140), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowBgAlpha(0.95f);
+    
+    if (ImGui::Begin("Transport")) {
         static float tempo = 120.0f;
         static float swing = 0.0f;
-        static int timeSignatureIndex = 0;
-        const char* timeSignatures[] = {"4/4", "3/4", "6/8"};
 
-        bool tempoChanged = ImGui::SliderFloat("Tempo (BPM)", &tempo, 60.0f, 180.0f);
-        bool swingChanged = ImGui::SliderFloat("Swing", &swing, 0.0f, 0.6f, "%.2f");
-        bool timeSignatureChanged = ImGui::Combo("Time Signature", &timeSignatureIndex, timeSignatures, 3);
+        ImGui::SliderFloat("Tempo (BPM)", &tempo, 60.0f, 180.0f);
+        ImGui::SliderFloat("Swing (%)", &swing, 0.0f, 0.6f, "%.2f");
 
-        ImGui::Spacing();
-        if (ImGui::Button("Play", ImVec2(100, 0))) {
-            if (sequencer_) {
-                sequencer_->getTransport().play();
-            }
+        if (sequencer_) {
+            sequencer_->getTransport().setTempo(tempo);
+            sequencer_->getTransport().setSwing(swing);
         }
 
-        ImGui::SameLine();
-        if (ImGui::Button("Stop", ImVec2(100, 0))) {
-            if (sequencer_) {
-                sequencer_->getTransport().stop();
-            }
-        }
-
-        ImGui::Spacing();
-
-        // Calculate current step from audio frame position (real-time playhead)
+        // Calculate and display current step
         if (audioEngine_ && sequencer_) {
             uint64_t frameCount = audioEngine_->getTotalFramesProcessed();
             uint32_t sampleRate = audioEngine_->getSampleRate();
             float currentTempo = sequencer_->getTransport().getTempo();
-            
-            // Calculate samples per step
-            // At 120 BPM: 120 beats/min, quarter note per beat, 4 quarters per bar, 16 steps per bar
-            // samples_per_beat = sampleRate * 60 / tempo
-            // samples_per_step = samples_per_beat / 4 (4 steps per beat in 16-step grid)
             uint64_t samplesPerBeat = (sampleRate * 60) / static_cast<uint32_t>(currentTempo);
             uint64_t samplesPerStep = samplesPerBeat / 4;
-            
             if (samplesPerStep > 0) {
                 currentStep_ = (frameCount / samplesPerStep) % 16;
             }
-        }
-
-        ImGui::Text("Current Step: %u / 15", currentStep_);
-        ImGui::Text("Frame Count: %llu", audioEngine_ ? audioEngine_->getTotalFramesProcessed() : 0);
-
-        // Update Transport if UI values changed
-        if (sequencer_) {
-            if (tempoChanged) {
-                sequencer_->getTransport().setTempo(tempo);
-            }
-            if (swingChanged) {
-                sequencer_->getTransport().setSwing(swing);
-            }
-            if (timeSignatureChanged) {
-                const char* tsValue = timeSignatures[timeSignatureIndex];
-                sequencer_->getTransport().setTimeSignature(tsValue);
-            }
+            ImGui::Text("Step: %u / 15", currentStep_);
         }
 
         ImGui::End();
     }
 
-    // Save Pattern Dialog
-    if (showSaveDialog_) {
-        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-        if (ImGui::BeginPopupModal("Save Pattern", &showSaveDialog_, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Pattern name:");
-            ImGui::InputText("##patternName", patternNameBuffer_, sizeof(patternNameBuffer_));
-
-            ImGui::Spacing();
-            ImGui::Separator();
-
-            if (ImGui::Button("Save", ImVec2(120, 0))) {
-                if (patternNameBuffer_[0] != '\0' && sequencer_) {
-                    const Pattern& pattern = sequencer_->getPattern();
-                    if (patternManager_->savePattern(patternNameBuffer_, pattern)) {
-                        ImGui::OpenPopup("Save Success");
-                    } else {
-                        ImGui::OpenPopup("Save Error");
-                    }
-                    std::memset(patternNameBuffer_, 0, sizeof(patternNameBuffer_));
-                    showSaveDialog_ = false;
-                }
-            }
-
-            ImGui::SameLine();
-            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
-                std::memset(patternNameBuffer_, 0, sizeof(patternNameBuffer_));
-                showSaveDialog_ = false;
-            }
-
-            ImGui::EndPopup();
+    // Step Editor window - main grid
+    ImGui::SetNextWindowPos(ImVec2(10, 180), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(1220, 480), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowBgAlpha(0.95f);
+    
+    if (ImGui::Begin("Step Editor")) {
+        if (stepEditor_ && sequencer_) {
+            stepEditor_->render(sequencer_, currentStep_);
         }
+        ImGui::End();
     }
 
-    // Load Pattern Dialog
-    if (showLoadDialog_) {
-        ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-        if (ImGui::BeginPopupModal("Load Pattern", &showLoadDialog_, ImGuiWindowFlags_AlwaysAutoResize)) {
-            ImGui::Text("Available patterns:");
-            ImGui::Separator();
-
-            const auto availablePatterns = patternManager_->getAvailablePatterns();
-            for (const auto& patternFile : availablePatterns) {
-                if (ImGui::Button(patternFile.c_str(), ImVec2(300, 0))) {
-                    if (sequencer_ && patternManager_->loadPattern(patternFile, sequencer_->getPattern())) {
-                        ImGui::OpenPopup("Load Success");
-                    } else {
-                        ImGui::OpenPopup("Load Error");
-                    }
-                    showLoadDialog_ = false;
-                }
-            }
-
-            if (availablePatterns.empty()) {
-                ImGui::Text("No patterns found.");
-            }
-
-            ImGui::Spacing();
-            ImGui::Separator();
-
-            if (ImGui::Button("Close", ImVec2(300, 0))) {
-                showLoadDialog_ = false;
-            }
-
-            ImGui::EndPopup();
-        }
-    }
-
-    // Success/Error popups
-    if (ImGui::BeginPopupModal("Save Success", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("Pattern saved successfully!");
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
-    }
-
-    if (ImGui::BeginPopupModal("Load Success", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("Pattern loaded successfully!");
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
-    }
-
-    if (ImGui::BeginPopupModal("Save Error", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("Failed to save pattern.");
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
-    }
-
-    if (ImGui::BeginPopupModal("Load Error", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-        ImGui::Text("Failed to load pattern.");
-        if (ImGui::Button("OK", ImVec2(120, 0))) {
-            ImGui::CloseCurrentPopup();
-        }
-        ImGui::EndPopup();
-    }
-
-    // Step Editor
-    if (stepEditor_ && sequencer_) {
-        stepEditor_->render(sequencer_, currentStep_);
-    }
-
-    // Sample Browser
-    if (sampleBrowser_ && sequencer_ && audioEngine_) {
-        // Note: SamplePlayer is owned by AudioEngine, would need getter
-        // For now, just render the UI with nullptr for SamplePlayer
-        sampleBrowser_->render(sequencer_, nullptr, currentStep_ % 8);
-    }
-
-    // Swing Visualizer
-    if (swingVisualizer_ && sequencer_) {
-        swingVisualizer_->render(sequencer_);
-    }
-
-    // MIDI Controller
-    if (midiController_ && midiManager_) {
-        midiController_->render(midiManager_);
-    }
-
-    // Demo window
-    if (showDemoWindow_) {
-        ImGui::ShowDemoWindow(&showDemoWindow_);
-    }
-
-    // Rendering
+    // End frame
     ImGui::Render();
 }
 
 void Window::renderFrame()
 {
-    // Render ImGui
+    glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-    // Swap buffers
     SDL_GL_SwapWindow(reinterpret_cast<SDL_Window*>(sdlWindow_));
 }
 
@@ -379,6 +214,17 @@ bool Window::processFrame()
     handleEvents();
     renderUI();
     renderFrame();
+
+    // Frame rate limiting
+    static uint32_t lastFrameTime = SDL_GetTicks();
+    uint32_t currentTime = SDL_GetTicks();
+    uint32_t frameDelta = currentTime - lastFrameTime;
+    const uint32_t targetFrameTime = 16; // ~60 FPS
+    
+    if (frameDelta < targetFrameTime) {
+        SDL_Delay(targetFrameTime - frameDelta);
+    }
+    lastFrameTime = SDL_GetTicks();
 
     return isOpen_;
 }

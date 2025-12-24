@@ -12,10 +12,7 @@ class AudioEngine;
 class Sequencer;
 class StepEditor;
 class PatternManager;
-class SwingVisualizer;
-class SampleBrowser;
 class MidiManager;
-class MidiController;
 
 /**
  * Window
@@ -64,14 +61,8 @@ private:
     // UI components
     std::unique_ptr<StepEditor> stepEditor_;
     std::unique_ptr<PatternManager> patternManager_;
-    std::unique_ptr<SwingVisualizer> swingVisualizer_;
-    std::unique_ptr<SampleBrowser> sampleBrowser_;
-    std::unique_ptr<MidiController> midiController_;
 
     // ImGui state
-    bool showDemoWindow_;
-    bool showSaveDialog_;
-    bool showLoadDialog_;
     char patternNameBuffer_[256];
     uint32_t currentStep_;  // Current playhead position for visualization
 

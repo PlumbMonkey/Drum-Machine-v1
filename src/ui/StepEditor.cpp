@@ -19,18 +19,9 @@ void StepEditor::render(Sequencer* sequencer, uint32_t currentStep)
     if (!sequencer) return;
 
     ImGui::SetNextWindowSize(ImVec2(1200, 400), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin("Step Editor", nullptr, ImGuiWindowFlags_NoMove)) {
-        ImGui::Columns(2, "step_editor_columns", true);
-
-        // Left panel: track controls
-        renderTrackPanel(currentStep);
-
-        ImGui::NextColumn();
-
-        // Right panel: step grid
+    if (ImGui::Begin("Step Editor")) {
+        // Don't use columns - just render the grid directly
         renderStepGrid(sequencer, currentStep);
-
-        ImGui::Columns(1);
         ImGui::End();
     }
 }

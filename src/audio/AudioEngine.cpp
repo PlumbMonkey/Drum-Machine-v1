@@ -1,4 +1,5 @@
 #include "AudioEngine.h"
+#include "SamplePlayer.h"
 #include "../sequencer/Sequencer.h"
 #include <RtAudio.h>
 #include <iostream>
@@ -16,7 +17,7 @@ public:
 
 AudioEngine::AudioEngine(uint32_t sampleRate)
     : sampleRate_(sampleRate), isRunning_(false), sequencer_(nullptr), 
-      totalFramesProcessed_(0)
+      samplePlayer_(nullptr), totalFramesProcessed_(0)
 {
     rtAudio_ = std::make_unique<RtAudioWrapper>();
 }
@@ -102,6 +103,11 @@ void AudioEngine::setSequencer(Sequencer* sequencer)
     sequencer_ = sequencer;
 }
 
+void AudioEngine::setSamplePlayer(SamplePlayer* samplePlayer)
+{
+    samplePlayer_ = samplePlayer;
+}
+
 int AudioEngine::processAudio(void* outputBuffer, unsigned int nFrames)
 {
     float* buffer = static_cast<float*>(outputBuffer);
@@ -109,11 +115,10 @@ int AudioEngine::processAudio(void* outputBuffer, unsigned int nFrames)
     // Zero out buffer first
     std::memset(buffer, 0, nFrames * 2 * sizeof(float)); // 2 channels
 
-    // Get audio from sequencer (if available)
-    if (sequencer_) {
-        // Read samples from sequencer into buffer
-        // This will be filled by sequencer's playback logic
-        // For now, silence
+    // Get audio from sample player (if available)
+    if (samplePlayer_) {
+        // Read samples from sample player and write to buffer
+        samplePlayer_->readFrames(buffer, nFrames, true);  // Loop the sample
     }
 
     // Update frame counter (atomic, lock-free)
