@@ -168,8 +168,8 @@ void Window::renderUI()
         static int timeSignatureIndex = 0;
         const char* timeSignatures[] = {"4/4", "3/4", "6/8"};
 
-        ImGui::SliderFloat("Tempo (BPM)", &tempo, 60.0f, 180.0f);
-        ImGui::Combo("Time Signature", &timeSignatureIndex, timeSignatures, 3);
+        bool tempoChanged = ImGui::SliderFloat("Tempo (BPM)", &tempo, 60.0f, 180.0f);
+        bool timeSignatureChanged = ImGui::Combo("Time Signature", &timeSignatureIndex, timeSignatures, 3);
 
         ImGui::Spacing();
         if (ImGui::Button("Play", ImVec2(100, 0))) {
@@ -186,13 +186,37 @@ void Window::renderUI()
         }
 
         ImGui::Spacing();
-        ImGui::Text("Current Step: %u / 15", currentStep_);
 
-        // Update sequencer with UI values
+        // Calculate current step from audio frame position (real-time playhead)
+        if (audioEngine_ && sequencer_) {
+            uint64_t frameCount = audioEngine_->getTotalFramesProcessed();
+            uint32_t sampleRate = audioEngine_->getSampleRate();
+            float currentTempo = sequencer_->getTransport().getTempo();
+            
+            // Calculate samples per step
+            // At 120 BPM: 120 beats/min, quarter note per beat, 4 quarters per bar, 16 steps per bar
+            // samples_per_beat = sampleRate * 60 / tempo
+            // samples_per_step = samples_per_beat / 4 (4 steps per beat in 16-step grid)
+            uint64_t samplesPerBeat = (sampleRate * 60) / static_cast<uint32_t>(currentTempo);
+            uint64_t samplesPerStep = samplesPerBeat / 4;
+            
+            if (samplesPerStep > 0) {
+                currentStep_ = (frameCount / samplesPerStep) % 16;
+            }
+        }
+
+        ImGui::Text("Current Step: %u / 15", currentStep_);
+        ImGui::Text("Frame Count: %llu", audioEngine_ ? audioEngine_->getTotalFramesProcessed() : 0);
+
+        // Update Transport if UI values changed
         if (sequencer_) {
-            sequencer_->getTransport().setTempo(tempo);
-            const char* tsValue = timeSignatures[timeSignatureIndex];
-            sequencer_->getTransport().setTimeSignature(tsValue);
+            if (tempoChanged) {
+                sequencer_->getTransport().setTempo(tempo);
+            }
+            if (timeSignatureChanged) {
+                const char* tsValue = timeSignatures[timeSignatureIndex];
+                sequencer_->getTransport().setTimeSignature(tsValue);
+            }
         }
 
         ImGui::End();
@@ -301,11 +325,6 @@ void Window::renderUI()
     // Step Editor
     if (stepEditor_ && sequencer_) {
         stepEditor_->render(sequencer_, currentStep_);
-    }
-
-    // Update current step position (simple calculation for demo)
-    if (sequencer_) {
-        currentStep_ = (currentStep_ + 1) % 16;
     }
 
     // Demo window
